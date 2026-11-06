@@ -52,11 +52,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _load() async {
     try {
-      final values = await Future.wait([service.loadConversations(), service.myProfile()]);
+      final chats = await service.loadConversations();
+      final me = await service.myProfile();
       if (!mounted) return;
       setState(() {
-        conversations = values[0] as List<Map<String, dynamic>>;
-        profile = values[1] as Map<String, dynamic>;
+        conversations = chats;
+        profile = me;
         loading = false;
         error = null;
       });
