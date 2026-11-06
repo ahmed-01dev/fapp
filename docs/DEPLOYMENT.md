@@ -27,6 +27,7 @@ Review the SQL before applying it. The ordered CLI migrations are already presen
 
 1. `20261106000100_wasel_core.sql` — baseline schema.
 2. `20261106000200_backend_foundation.sql` — push-token registry and safety tables.
+3. `20261106000300_security_hardening.sql` — immutable message/request identities and block-aware discovery.
 
 Apply them to the linked dedicated WASEL project:
 
