@@ -313,3 +313,83 @@ drop trigger if exists conversations_add_creator on public.conversations;
 create trigger conversations_add_creator
 after insert on public.conversations
 for each row execute function private.add_creator_to_conversation();
+
+
+-- Stranger-contact requests: a pending request does not create a conversation.
+create table if not exists public.contact_requests (
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid not null references auth.users(id) on delete cascade,
+  recipient_id uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','accepted','rejected')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (sender_id <> recipient_id)
+);
+create unique index if not exists contact_requests_pending_pair_uq
+  on public.contact_requests(sender_id, recipient_id) where status = 'pending';
+create index if not exists contact_requests_recipient_pending_idx
+  on public.contact_requests(recipient_id, created_at desc) where status = 'pending';
+alter table public.contact_requests enable row level security;
+grant select, insert, update on public.contact_requests to authenticated;
+
+drop policy if exists "participants read contact requests" on public.contact_requests;
+create policy "participants read contact requests" on public.contact_requests
+  for select to authenticated using (sender_id = (select auth.uid()) or recipient_id = (select auth.uid()));
+drop policy if exists "sender creates pending request" on public.contact_requests;
+create policy "sender creates pending request" on public.contact_requests
+  for insert to authenticated with check (
+    sender_id = (select auth.uid()) and status = 'pending' and recipient_id <> (select auth.uid())
+  );
+drop policy if exists "recipient responds to pending request" on public.contact_requests;
+create policy "recipient responds to pending request" on public.contact_requests
+  for update to authenticated
+  using (recipient_id = (select auth.uid()) and status = 'pending')
+  with check (recipient_id = (select auth.uid()) and status in ('accepted','rejected'));
+
+create or replace function private.enforce_contact_request_rate_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare pending_count integer;
+begin
+  select count(*) into pending_count
+  from public.contact_requests r
+  where r.sender_id = new.sender_id and r.created_at > now() - interval '1 hour';
+  if pending_count >= 10 then
+    raise exception 'contact request rate limit reached';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function private.enforce_contact_request_rate_limit() from public, anon;
+drop trigger if exists contact_request_rate_limit on public.contact_requests;
+create trigger contact_request_rate_limit before insert on public.contact_requests
+for each row execute function private.enforce_contact_request_rate_limit();
+
+create or replace function private.create_conversation_after_request_accept()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare new_conversation_id uuid;
+begin
+  if old.status = 'pending' and new.status = 'accepted' then
+    insert into public.conversations(created_by, kind)
+    values (new.recipient_id, 'direct')
+    returning id into new_conversation_id;
+    -- The conversations_add_creator trigger adds the recipient automatically.
+    insert into public.conversation_members(conversation_id, user_id)
+    values (new_conversation_id, new.sender_id)
+    on conflict do nothing;
+  end if;
+  return new;
+end;
+$$;
+revoke all on function private.create_conversation_after_request_accept() from public, anon;
+drop trigger if exists contact_request_accept_creates_conversation on public.contact_requests;
+create trigger contact_request_accept_creates_conversation
+after update of status on public.contact_requests
+for each row execute function private.create_conversation_after_request_accept();
