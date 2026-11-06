@@ -21,11 +21,33 @@ class WaselService {
     return List<Map<String, dynamic>>.from(result as List);
   }
 
-  Future<String> startDirectChat(String otherUserId) async {
-    final conversation = await client.from('conversations').insert({'created_by': userId, 'kind': 'direct'}).select('id').single();
-    final id = conversation['id'] as String;
-    await client.from('conversation_members').insert({'conversation_id': id, 'user_id': otherUserId});
-    return id;
+  Future<void> sendContactRequest(String otherUserId) async {
+    await client.from('contact_requests').insert({
+      'sender_id': userId,
+      'recipient_id': otherUserId,
+      'status': 'pending',
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> loadIncomingRequests() async {
+    final requests = await client.from('contact_requests')
+        .select('id,sender_id,created_at')
+        .eq('recipient_id', userId)
+        .eq('status', 'pending')
+        .order('created_at', ascending: false);
+    final result = <Map<String, dynamic>>[];
+    for (final request in requests) {
+      final people = await client.from('profiles')
+          .select('id,username,display_name')
+          .eq('id', request['sender_id'] as String);
+      result.add({...request, 'sender': people.isEmpty ? null : people.first});
+    }
+    return result;
+  }
+
+  Future<void> acceptContactRequest(String requestId) async {
+    await client.from('contact_requests').update({'status': 'accepted'})
+        .eq('id', requestId).eq('recipient_id', userId).eq('status', 'pending');
   }
 
   Future<void> sendMessage(String conversationId, String body) async {
