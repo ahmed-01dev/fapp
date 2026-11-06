@@ -23,18 +23,18 @@ Never commit access tokens, database passwords, service-role keys, SMS credentia
 
 ## 3. Database deployment
 
-Review the SQL before applying it. Apply the baseline schema first, then the additive foundation migration:
+Review the SQL before applying it. The ordered CLI migrations are already present under `supabase/migrations/`:
+
+1. `20261106000100_wasel_core.sql` — baseline schema.
+2. `20261106000200_backend_foundation.sql` — push-token registry and safety tables.
+
+Apply them to the linked dedicated WASEL project:
 
 ```sh
 supabase db push
 ```
 
-For a fresh project, place the reviewed SQL in timestamped files under `supabase/migrations/` (or use the dashboard SQL editor in the documented order). The repository's current source-of-truth files are:
-
-- `database/schema.sql`
-- `database/2026_11_backend_foundation.sql`
-
-Do not apply either file to NEXORA. After deployment, verify RLS is enabled on every client-facing table, verify the `messages` table is in `supabase_realtime`, and test access using two normal authenticated accounts.
+The human-readable source copies remain under `database/` for review. Keep the migration copies and source copies synchronized when making future schema changes. Do not apply either file to NEXORA. After deployment, verify RLS is enabled on every client-facing table, verify the `messages` table is in `supabase_realtime`, and test access using two normal authenticated accounts.
 
 ## 4. Edge Functions
 
