@@ -72,7 +72,7 @@ class _AuthScreenState extends State<AuthScreen> {
               decoration: BoxDecoration(
                 gradient: const LinearGradient(colors: [waselPurple, waselCyan], begin: Alignment.topLeft, end: Alignment.bottomRight),
                 borderRadius: BorderRadius.circular(30),
-                boxShadow: [BoxShadow(color: waselPurple.withOpacity(.35), blurRadius: 32, spreadRadius: 1)],
+                boxShadow: [BoxShadow(color: waselPurple.withValues(alpha: .35), blurRadius: 32, spreadRadius: 1)],
               ),
               child: const Icon(Icons.forum_rounded, size: 46, color: Colors.white),
             )),
