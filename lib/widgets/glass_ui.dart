@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
 const waselBg = Color(0xFF07080D);
@@ -33,14 +34,36 @@ class GlassPanel extends StatelessWidget {
   );
 }
 
-class GlowOrb extends StatelessWidget {
+class GlowOrb extends StatefulWidget {
   const GlowOrb({super.key, required this.color, this.size = 190});
   final Color color;
   final double size;
   @override
-  Widget build(BuildContext context) => IgnorePointer(child: Container(
-    width: size, height: size,
-    decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: color.withValues(alpha: .22), blurRadius: size * .55, spreadRadius: size * .08)]),
+  State<GlowOrb> createState() => _GlowOrbState();
+}
+
+class _GlowOrbState extends State<GlowOrb> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(vsync: this, duration: const Duration(seconds: 9))..repeat(reverse: true);
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => IgnorePointer(child: AnimatedBuilder(
+    animation: _controller,
+    builder: (context, child) {
+      final t = Curves.easeInOutSine.transform(_controller.value);
+      return Transform.translate(
+        offset: Offset(10 * (t - .5), 16 * (t - .5)),
+        child: Transform.scale(
+          scale: .92 + t * .16,
+          child: Container(
+            width: widget.size, height: widget.size,
+            decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
+              BoxShadow(color: widget.color.withValues(alpha: .17 + t * .10), blurRadius: widget.size * (.48 + t * .12), spreadRadius: widget.size * .07),
+            ]),
+          ),
+        ),
+      );
+    },
   ));
 }
 
