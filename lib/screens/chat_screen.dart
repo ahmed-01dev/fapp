@@ -78,7 +78,7 @@ class _ChatScreenState extends State<ChatScreen> {
             if (loading && !snapshot.hasData) return const Center(child: CircularProgressIndicator(color: waselPurple));
             if (error != null && rows.isEmpty) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(error!, textAlign: TextAlign.center)));
             if (rows.isEmpty) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 74, height: 74, decoration: BoxDecoration(color: waselPurple.withOpacity(.14), shape: BoxShape.circle), child: const Icon(Icons.waving_hand_rounded, color: waselPurple, size: 34)),
+              Container(width: 74, height: 74, decoration: BoxDecoration(color: waselPurple.withValues(alpha: .14), shape: BoxShape.circle), child: const Icon(Icons.waving_hand_rounded, color: waselPurple, size: 34)),
               const SizedBox(height: 15),
               const Text('أول رسالة تبدأ الحكاية', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
               const SizedBox(height: 5),
@@ -99,13 +99,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       gradient: mine ? const LinearGradient(colors: [Color(0xFF7058C9), Color(0xFF493A83)], begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
-                      color: mine ? null : Colors.white.withOpacity(.075),
+                      color: mine ? null : Colors.white.withValues(alpha: .075),
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(20), topRight: const Radius.circular(20),
                         bottomLeft: Radius.circular(mine ? 20 : 5), bottomRight: Radius.circular(mine ? 5 : 20),
                       ),
-                      border: Border.all(color: Colors.white.withOpacity(mine ? .16 : .10)),
-                      boxShadow: mine ? [BoxShadow(color: waselPurple.withOpacity(.14), blurRadius: 18, offset: const Offset(0, 5))] : null,
+                      border: Border.all(color: Colors.white.withValues(alpha: mine ? .16 : .10)),
+                      boxShadow: mine ? [BoxShadow(color: waselPurple.withValues(alpha: .14), blurRadius: 18, offset: const Offset(0, 5))] : null,
                     ),
                     child: Text(message['body']?.toString() ?? '', style: const TextStyle(color: Colors.white, height: 1.45, fontSize: 14)),
                   ),
