@@ -22,10 +22,10 @@ class GlassPanel extends StatelessWidget {
       child: Container(
         padding: padding,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(opacity * .10),
+          color: Colors.white.withValues(alpha: opacity * .10),
           borderRadius: BorderRadius.circular(radius),
-          border: Border.all(color: borderColor ?? Colors.white.withOpacity(.13), width: 1),
-          boxShadow: [BoxShadow(color: waselPurple.withOpacity(.07), blurRadius: 32, spreadRadius: -12)],
+          border: Border.all(color: borderColor ?? Colors.white.withValues(alpha: .13), width: 1),
+          boxShadow: [BoxShadow(color: waselPurple.withValues(alpha: .07), blurRadius: 32, spreadRadius: -12)],
         ),
         child: child,
       ),
@@ -40,7 +40,7 @@ class GlowOrb extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IgnorePointer(child: Container(
     width: size, height: size,
-    decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: color.withOpacity(.22), blurRadius: size * .55, spreadRadius: size * .08)]),
+    decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: color.withValues(alpha: .22), blurRadius: size * .55, spreadRadius: size * .08)]),
   ));
 }
 
@@ -67,7 +67,7 @@ class WaselAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: const LinearGradient(colors: [Color(0xFF57458D), Color(0xFF1B8797)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        border: Border.all(color: Colors.white.withOpacity(.24)),
+        border: Border.all(color: Colors.white.withValues(alpha: .24)),
       ),
       child: Text(label.isEmpty ? 'و' : label.substring(0, 1), style: TextStyle(color: Colors.white, fontSize: size * .38, fontWeight: FontWeight.w800))),
     if (online) Positioned(bottom: 1, right: 1, child: Container(width: 12, height: 12, decoration: BoxDecoration(color: const Color(0xFF51E0A0), shape: BoxShape.circle, border: Border.all(color: waselBg, width: 2)))),
