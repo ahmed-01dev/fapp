@@ -137,25 +137,6 @@ $$;
 revoke all on function public.nearby_matches() from public, anon;
 grant execute on function public.nearby_matches() to authenticated;
 
--- Remove the other participant's live Nearby row immediately after a block.
-create or replace function private.clear_blocked_nearby_presence()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  delete from public.nearby_presence
-  where user_id = new.blocked_id;
-  return new;
-end;
-$$;
-revoke all on function private.clear_blocked_nearby_presence() from public, anon, authenticated;
-drop trigger if exists user_blocks_clear_nearby on public.user_blocks;
-create trigger user_blocks_clear_nearby
-after insert on public.user_blocks
-for each row execute function private.clear_blocked_nearby_presence();
-
 -- Existing pending requests between the two users are no longer actionable.
 update public.contact_requests r
 set status = 'rejected', updated_at = now()
