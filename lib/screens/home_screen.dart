@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,7 +12,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late final WaselService service;
   int tab = 0;
   List<Map<String, dynamic>> conversations = [];
@@ -20,9 +21,31 @@ class _HomeScreenState extends State<HomeScreen> {
   bool nearbyEnabled = false;
   bool loading = true;
   String? error;
+  Timer? nearbyTimer;
 
   @override
-  void initState() { super.initState(); service = WaselService(Supabase.instance.client); _load(); }
+  void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); service = WaselService(Supabase.instance.client); _load(); }
+
+  @override
+  void dispose() { nearbyTimer?.cancel(); WidgetsBinding.instance.removeObserver(this); super.dispose(); }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
+      nearbyTimer?.cancel();
+      if (nearbyEnabled) { service.disableNearby(); if (mounted) setState(() { nearbyEnabled = false; nearby = []; }); }
+    }
+  }
+
+  Future<void> _refreshNearby() async {
+    if (!nearbyEnabled) return;
+    try {
+      final position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.low));
+      await service.enableNearby(position.latitude, position.longitude);
+      final matches = await service.nearbyMatches();
+      if (mounted && nearbyEnabled) setState(() => nearby = matches);
+    } catch (_) { /* Expiring server-side presence remains the privacy fallback. */ }
+  }
 
   Future<void> _load() async {
     try {
@@ -36,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _toggleNearby(bool enabled) async {
     if (!enabled) {
+      nearbyTimer?.cancel();
       try { await service.disableNearby(); } catch (_) {}
       if (mounted) setState(() { nearbyEnabled = false; nearby = []; });
       return;
@@ -51,6 +75,8 @@ class _HomeScreenState extends State<HomeScreen> {
       await service.enableNearby(position.latitude, position.longitude);
       final matches = await service.nearbyMatches();
       if (mounted) setState(() { nearbyEnabled = true; nearby = matches; error = null; });
+      nearbyTimer?.cancel();
+      nearbyTimer = Timer.periodic(const Duration(minutes: 10), (_) => _refreshNearby());
     } catch (_) {
       if (mounted) setState(() => error = 'تعذر تفعيل الأشخاص القريبين. تأكد من إعداد قاعدة البيانات.');
     }
