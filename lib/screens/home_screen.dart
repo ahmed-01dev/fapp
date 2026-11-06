@@ -115,11 +115,56 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (users.isEmpty) throw Exception('لم يتم العثور على اسم المستخدم.');
       final other = users.first;
       if (other['id'] == service.userId) throw Exception('ده حسابك أنت.');
-      final id = await service.startDirectChat(other['id'] as String);
+      await service.sendContactRequest(other['id'] as String);
       if (!mounted) return;
-      await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(service: service, conversationId: id, title: other['display_name']?.toString() ?? 'محادثة')));
-      await _load();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب التواصل. ستبدأ المحادثة بعد موافقة الطرف الآخر.')));
     } catch (e) { if (mounted) setState(() => error = e.toString()); }
+  }
+
+
+  Future<void> _showRequests() async {
+    try {
+      final requests = await service.loadIncomingRequests();
+      if (!mounted) return;
+      if (requests.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد طلبات تواصل جديدة.')));
+        return;
+      }
+      await showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+        title: const Text('طلبات التواصل'),
+        content: SizedBox(width: 360, child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: requests.length,
+          separatorBuilder: (_, __) => const Divider(),
+          itemBuilder: (context, index) {
+            final request = requests[index];
+            final sender = request['sender'] as Map<String, dynamic>?;
+            final displayName = sender?['display_name']?.toString() ?? 'مستخدم';
+            final username = sender?['username']?.toString();
+            return ListTile(
+              title: Text(displayName),
+              subtitle: Text(username == null ? 'طلب محادثة' : '@' + username),
+              trailing: FilledButton(
+                onPressed: () async {
+                  Navigator.pop(dialogContext);
+                  try {
+                    await service.acceptContactRequest(request['id'] as String);
+                    await _load();
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم قبول الطلب وفتح المحادثة.')));
+                  } catch (e) {
+                    if (mounted) setState(() => error = e.toString());
+                  }
+                },
+                child: const Text('قبول'),
+              ),
+            );
+          },
+        )),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+      ));
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    }
   }
 
   Future<void> _signOut() async {
@@ -133,7 +178,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final pages = [_chats(), _nearby(), _profile()];
     return Scaffold(
       appBar: AppBar(title: const Text('واصل', style: TextStyle(fontWeight: FontWeight.w900)),
-        actions: [if (tab == 0) IconButton(onPressed: _newChat, icon: const Icon(Icons.edit_square_rounded))]),
+        actions: [
+        if (tab == 0) IconButton(onPressed: _showRequests, tooltip: 'طلبات التواصل', icon: const Icon(Icons.mark_email_unread_outlined)),
+        if (tab == 0) IconButton(onPressed: _newChat, tooltip: 'محادثة جديدة', icon: const Icon(Icons.edit_square_rounded)),
+      ]),
       body: loading ? const Center(child: CircularProgressIndicator()) :
         error != null ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(error!, textAlign: TextAlign.center))) : pages[tab],
       bottomNavigationBar: NavigationBar(
