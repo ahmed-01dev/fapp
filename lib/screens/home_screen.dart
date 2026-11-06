@@ -22,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool nearbyEnabled = false;
   bool loading = true;
   String? error;
+  String searchQuery = '';
   Timer? nearbyTimer;
 
   @override
@@ -205,7 +206,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ? const Center(child: CircularProgressIndicator(color: waselPurple))
         : error != null
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(error!, textAlign: TextAlign.center)))
-          : IndexedStack(index: tab, children: [_chats(), _nearby(), _profile()]))),
+          : AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            switchInCurve: Curves.easeOutCubic,
+            transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: SlideTransition(position: Tween<Offset>(begin: const Offset(0, .025), end: Offset.zero).animate(animation), child: child)),
+            child: KeyedSubtree(key: ValueKey(tab), child: [ _chats(), _nearby(), _profile() ][tab]),
+          ))),
       floatingActionButton: tab == 0 ? FloatingActionButton(
         onPressed: _newChat,
         backgroundColor: waselPurple,
@@ -269,6 +275,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         const Text('أهلاً بيك 👋', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900)),
         const SizedBox(height: 5),
         const Text('كل محادثاتك، في مكان واحد.', style: TextStyle(color: Color(0xFF9996AA))),
+        const SizedBox(height: 20),
+        TextField(
+          onChanged: (value) => setState(() => searchQuery = value.trim().toLowerCase()),
+          decoration: const InputDecoration(
+            hintText: 'دوّر على محادثة...',
+            prefixIcon: Icon(Icons.search_rounded, color: waselCyan),
+            suffixIcon: Icon(Icons.tune_rounded, color: Color(0xFF777487)),
+          ),
+        ),
         const SizedBox(height: 22),
         GlassPanel(padding: const EdgeInsets.all(18), radius: 24, opacity: .8, child: Row(children: [
           Container(width: 48, height: 48, decoration: BoxDecoration(color: waselPurple.withValues(alpha: .18), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.bolt_rounded, color: waselPurple, size: 27)),
@@ -295,7 +310,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           const SizedBox(height: 16),
           FilledButton.icon(onPressed: _newChat, icon: const Icon(Icons.add), label: const Text('ابدأ دلوقتي')),
         ])),
-        ...conversations.map((item) {
+        ...conversations.where((item) {
+          final person = item['other_user'] as Map<String, dynamic>?;
+          final name = person?['display_name']?.toString().toLowerCase() ?? '';
+          final username = person?['username']?.toString().toLowerCase() ?? '';
+          return searchQuery.isEmpty || name.contains(searchQuery) || username.contains(searchQuery);
+        }).map((item) {
           final person = item['other_user'] as Map<String, dynamic>?;
           final name = person?['display_name']?.toString() ?? 'محادثة';
           final username = person?['username']?.toString();
