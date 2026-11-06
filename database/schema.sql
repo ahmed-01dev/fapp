@@ -290,3 +290,26 @@ create policy "members send as themselves" on public.messages
     sender_id = (select auth.uid())
     and private.is_conversation_member(conversation_id, (select auth.uid()))
   );
+
+
+-- Automatically add the creator as the first member so the creator can read
+-- the inserted conversation and then invite exactly one other participant.
+create or replace function private.add_creator_to_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.conversation_members(conversation_id, user_id)
+  values (new.id, new.created_by)
+  on conflict do nothing;
+  return new;
+end;
+$$;
+revoke all on function private.add_creator_to_conversation() from public, anon;
+
+drop trigger if exists conversations_add_creator on public.conversations;
+create trigger conversations_add_creator
+after insert on public.conversations
+for each row execute function private.add_creator_to_conversation();
