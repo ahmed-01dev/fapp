@@ -44,25 +44,22 @@ Deno.serve(async (req: Request) => {
     ? candidate.slice(0, 40)
     : "New user";
 
-  const { data: profile, error: profileError } = await client
+  const { error: insertError } = await client
     .from("profiles")
     .upsert(
       { id: authData.user.id, display_name: displayName },
       { onConflict: "id", ignoreDuplicates: true },
-    )
+    );
+
+  if (insertError) return json({ error: "profile_bootstrap_failed" }, 500);
+
+  // Always read back the row; ignoreDuplicates can return no row on an existing profile.
+  const { data: profile, error: readError } = await client
+    .from("profiles")
     .select("id, display_name, username")
+    .eq("id", authData.user.id)
     .maybeSingle();
 
-  if (profileError) {
-    // If the row already existed, fetch only the caller's own profile via RLS.
-    const { data: existing, error: readError } = await client
-      .from("profiles")
-      .select("id, display_name, username")
-      .eq("id", authData.user.id)
-      .maybeSingle();
-    if (readError || !existing) return json({ error: "profile_bootstrap_failed" }, 500);
-    return json({ profile: existing });
-  }
-
+  if (readError || !profile) return json({ error: "profile_bootstrap_failed" }, 500);
   return json({ profile });
 });
