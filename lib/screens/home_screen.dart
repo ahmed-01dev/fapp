@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final chats = await service.loadConversations();
       final me = await service.myProfile();
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         conversations = chats;
         profile = me;
@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _refreshNearby() async {
-    if (!nearbyEnabled) return;
+    if (!nearbyEnabled) { return; }
     try {
       final position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.low));
       await service.enableNearby(position.latitude, position.longitude);
@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ],
     ));
     controller.dispose();
-    if (value == null) return;
+    if (value == null) { return; }
     try { await service.saveUsername(value); await _load(); if (mounted) _message('تم تحديث اليوزرنيم'); }
     catch (e) { if (mounted) _message(e.toString()); }
   }
@@ -130,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ],
     ));
     controller.dispose();
-    if (username == null || username.trim().isEmpty) return;
+    if (username == null || username.trim().isEmpty) { return; }
     try {
       final users = await service.searchUsername(username);
       if (users.isEmpty) { _message('مش لاقيين اليوزر ده. راجع كتابته وجرب تاني.'); return; }
@@ -151,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: const Text('طلبات التواصل'),
         content: SizedBox(width: 360, child: ListView.separated(
           shrinkWrap: true, itemCount: requests.length,
-          separatorBuilder: (_, __) => const Divider(color: Colors.white12),
+          separatorBuilder: (_, _) => const Divider(color: Colors.white12),
           itemBuilder: (context, index) {
             final request = requests[index];
             final sender = request['sender'] as Map<String, dynamic>?;
@@ -236,9 +236,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? waselPurple.withOpacity(.20) : Colors.transparent,
+          color: selected ? waselPurple.withValues(alpha: .20) : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
-          border: selected ? Border.all(color: waselPurple.withOpacity(.28)) : null,
+          border: selected ? Border.all(color: waselPurple.withValues(alpha: .28)) : null,
         ),
         child: Row(children: [
           Icon(icon, color: selected ? waselCyan : const Color(0xFF88869A), size: 20),
@@ -271,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         const Text('كل محادثاتك، في مكان واحد.', style: TextStyle(color: Color(0xFF9996AA))),
         const SizedBox(height: 22),
         GlassPanel(padding: const EdgeInsets.all(18), radius: 24, opacity: .8, child: Row(children: [
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: waselPurple.withOpacity(.18), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.bolt_rounded, color: waselPurple, size: 27)),
+          Container(width: 48, height: 48, decoration: BoxDecoration(color: waselPurple.withValues(alpha: .18), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.bolt_rounded, color: waselPurple, size: 27)),
           const SizedBox(width: 13),
           const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('ابدأ محادثة جديدة', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
