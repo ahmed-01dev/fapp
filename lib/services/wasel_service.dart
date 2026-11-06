@@ -24,7 +24,6 @@ class WaselService {
   Future<String> startDirectChat(String otherUserId) async {
     final conversation = await client.from('conversations').insert({'created_by': userId, 'kind': 'direct'}).select('id').single();
     final id = conversation['id'] as String;
-    await client.from('conversation_members').insert({'conversation_id': id, 'user_id': userId});
     await client.from('conversation_members').insert({'conversation_id': id, 'user_id': otherUserId});
     return id;
   }
