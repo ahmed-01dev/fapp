@@ -69,7 +69,7 @@ class WaselAvatar extends StatelessWidget {
         gradient: const LinearGradient(colors: [Color(0xFF57458D), Color(0xFF1B8797)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         border: Border.all(color: Colors.white.withOpacity(.24)),
       ),
-      child: Text(label.isEmpty ? 'و' : label.characters.first, style: TextStyle(color: Colors.white, fontSize: size * .38, fontWeight: FontWeight.w800))),
+      child: Text(label.isEmpty ? 'و' : label.substring(0, 1), style: TextStyle(color: Colors.white, fontSize: size * .38, fontWeight: FontWeight.w800))),
     if (online) Positioned(bottom: 1, right: 1, child: Container(width: 12, height: 12, decoration: BoxDecoration(color: const Color(0xFF51E0A0), shape: BoxShape.circle, border: Border.all(color: waselBg, width: 2)))),
   ]);
 }
