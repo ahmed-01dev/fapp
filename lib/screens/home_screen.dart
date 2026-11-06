@@ -143,14 +143,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             final username = sender?['username']?.toString();
             return ListTile(
               title: Text(displayName),
-              subtitle: Text(username == null ? 'طلب محادثة' : '@\${username}'),
+              subtitle: Text(username == null ? 'طلب محادثة' : '@${username}'),
               trailing: FilledButton(
                 onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
                   Navigator.pop(dialogContext);
                   try {
                     await service.acceptContactRequest(request['id'] as String);
                     await _load();
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم قبول الطلب وفتح المحادثة.')));
+                    if (mounted) messenger.showSnackBar(const SnackBar(content: Text('تم قبول الطلب وفتح المحادثة.')));
                   } catch (e) {
                     if (mounted) setState(() => error = e.toString());
                   }
@@ -233,13 +234,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ]))),
     const SizedBox(height: 16),
     if (nearbyEnabled) ...[
-      Text('أشخاص حولك (\${nearby.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+      Text('أشخاص حولك (${nearby.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
       const SizedBox(height: 8),
       if (nearby.isEmpty) const Text('لا يوجد أشخاص ظاهرون بالقرب منك حالياً.'),
       ...nearby.map((person) => Card(child: ListTile(
         leading: const CircleAvatar(child: Icon(Icons.person_outline)),
         title: Text(person['display_name']?.toString() ?? 'مستخدم'),
-        subtitle: Text(person['username'] == null ? '' : '@\${person['username']}'),
+        subtitle: Text(person['username'] == null ? '' : '@${person['username']}'),
         trailing: Text(_distanceLabel(person['distance_band']?.toString())),
       ))),
     ],
@@ -258,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       const CircleAvatar(radius: 36, child: Icon(Icons.person, size: 36)),
       const SizedBox(height: 12),
       Text(profile?['display_name']?.toString() ?? 'مستخدم واصل', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-      Text(profile?['username'] == null ? 'لم تضف يوزرنيم بعد' : '@\${profile!['username']}'),
+      Text(profile?['username'] == null ? 'لم تضف يوزرنيم بعد' : '@${profile!['username']}'),
       const SizedBox(height: 16),
       OutlinedButton.icon(onPressed: _setUsername, icon: const Icon(Icons.alternate_email), label: const Text('تعديل اليوزرنيم')),
     ]))),
