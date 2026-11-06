@@ -225,3 +225,68 @@ begin
   alter publication supabase_realtime add table public.messages;
 exception when duplicate_object then null;
 end $$;
+
+
+-- Non-exposed helper schema avoids recursive RLS policy evaluation on conversation_members.
+create schema if not exists private;
+revoke all on schema private from public, anon;
+grant usage on schema private to authenticated;
+
+create or replace function private.is_conversation_member(p_conversation_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.conversation_members m
+    where m.conversation_id = p_conversation_id and m.user_id = p_user_id
+  );
+$$;
+
+create or replace function private.can_add_direct_member(p_conversation_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select auth.uid() is not null
+    and exists (
+      select 1 from public.conversations c
+      where c.id = p_conversation_id and c.created_by = auth.uid() and c.kind = 'direct'
+    )
+    and (p_user_id = auth.uid() or (
+      select count(*) from public.conversation_members m
+      where m.conversation_id = p_conversation_id
+    ) < 2);
+$$;
+
+revoke all on function private.is_conversation_member(uuid,uuid) from public, anon;
+revoke all on function private.can_add_direct_member(uuid,uuid) from public, anon;
+grant execute on function private.is_conversation_member(uuid,uuid) to authenticated;
+grant execute on function private.can_add_direct_member(uuid,uuid) to authenticated;
+
+drop policy if exists "conversation members can read conversation" on public.conversations;
+create policy "conversation members can read conversation" on public.conversations
+  for select to authenticated using (private.is_conversation_member(id, (select auth.uid())));
+
+drop policy if exists "members can read membership" on public.conversation_members;
+create policy "members can read membership" on public.conversation_members
+  for select to authenticated using (private.is_conversation_member(conversation_id, (select auth.uid())));
+
+drop policy if exists "creator adds members to own new conversation" on public.conversation_members;
+create policy "creator adds members to own new conversation" on public.conversation_members
+  for insert to authenticated with check (private.can_add_direct_member(conversation_id, user_id));
+
+drop policy if exists "members read messages" on public.messages;
+create policy "members read messages" on public.messages
+  for select to authenticated using (private.is_conversation_member(conversation_id, (select auth.uid())));
+
+drop policy if exists "members send as themselves" on public.messages;
+create policy "members send as themselves" on public.messages
+  for insert to authenticated with check (
+    sender_id = (select auth.uid())
+    and private.is_conversation_member(conversation_id, (select auth.uid()))
+  );
