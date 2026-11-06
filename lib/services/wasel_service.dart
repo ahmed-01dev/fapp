@@ -56,9 +56,16 @@ class WaselService {
     return List<Map<String, dynamic>>.from(rows);
   }
 
-  Future<void> enableNearby(double latitude, double longitude) async =>
-      client.rpc('nearby_enable', params: {'p_lat': latitude, 'p_lon': longitude});
-  Future<void> disableNearby() async => client.rpc('nearby_disable');
-  Future<List<Map<String, dynamic>>> nearbyMatches() async =>
-      List<Map<String, dynamic>>.from(await client.rpc('nearby_matches') as List);
+  Future<void> enableNearby(double latitude, double longitude) async {
+    await client.rpc('nearby_enable', params: {'p_lat': latitude, 'p_lon': longitude});
+  }
+
+  Future<void> disableNearby() async {
+    await client.rpc('nearby_disable');
+  }
+
+  Future<List<Map<String, dynamic>>> nearbyMatches() async {
+    final rows = await client.rpc('nearby_matches');
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
 }
