@@ -1,0 +1,36 @@
+name: Android MVP CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate native platform scaffolding
+        run: flutter create --platforms=android,ios --org com.wasel.app .
+      - name: Add foreground location permission for Android
+        run: |
+          sed -i '/<application/i\    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' android/app/src/main/AndroidManifest.xml
+      - name: Configure iOS foreground location disclosure
+        run: |
+          /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'يستخدم واصل موقعك فقط عند تفعيل ميزة الأشخاص القريبين.' " ios/Runner/Info.plist || true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - name: Build debug APK
+        run: flutter build apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasel-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
