@@ -27,7 +27,14 @@ jobs:
           sed -i '/<application/i\    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' android/app/src/main/AndroidManifest.xml
       - name: Configure iOS foreground location disclosure
         run: |
-          /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'يستخدم واصل موقعك فقط عند تفعيل ميزة الأشخاص القريبين.' " ios/Runner/Info.plist || true
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+          path = Path("ios/Runner/Info.plist")
+          data = plistlib.loads(path.read_bytes())
+          data["NSLocationWhenInUseUsageDescription"] = "يستخدم واصل موقعك فقط عند تفعيل ميزة الأشخاص القريبين."
+          path.write_bytes(plistlib.dumps(data))
+          PY
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
