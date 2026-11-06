@@ -77,13 +77,13 @@ class _ChatScreenState extends State<ChatScreen> {
             final rows = snapshot.hasData ? snapshot.data! : messages;
             if (loading && !snapshot.hasData) return const Center(child: CircularProgressIndicator(color: waselPurple));
             if (error != null && rows.isEmpty) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(error!, textAlign: TextAlign.center)));
-            if (rows.isEmpty) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (rows.isEmpty) { return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
               Container(width: 74, height: 74, decoration: BoxDecoration(color: waselPurple.withValues(alpha: .14), shape: BoxShape.circle), child: const Icon(Icons.waving_hand_rounded, color: waselPurple, size: 34)),
               const SizedBox(height: 15),
               const Text('أول رسالة تبدأ الحكاية', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
               const SizedBox(height: 5),
               const Text('ابعت رسالة وابدأ الكلام.', style: TextStyle(color: Color(0xFF9996AA))),
-            ]));
+            ])); }
             return ListView.builder(
               controller: scroll,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 22),
