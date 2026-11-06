@@ -1,5 +1,9 @@
 name: Android MVP CI
 
+concurrency:
+  group: android-mvp-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
