@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _refreshNearby() async {
-    if (!nearbyEnabled) return;
+    if (!nearbyEnabled) { return; }
     try {
       final position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.low));
       await service.enableNearby(position.latitude, position.longitude);
@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ],
     ));
     controller.dispose();
-    if (value == null) return;
+    if (value == null) { return; }
     try { await service.saveUsername(value); await _load(); }
     catch (e) { if (mounted) setState(() => error = e.toString()); }
   }
@@ -109,14 +109,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ],
     ));
     controller.dispose();
-    if (username == null || username.trim().isEmpty) return;
+    if (username == null || username.trim().isEmpty) { return; }
     try {
       final users = await service.searchUsername(username);
       if (users.isEmpty) throw Exception('لم يتم العثور على اسم المستخدم.');
       final other = users.first;
       if (other['id'] == service.userId) throw Exception('ده حسابك أنت.');
       await service.sendContactRequest(other['id'] as String);
-      if (!mounted) return;
+      if (!mounted) { return; }
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب التواصل. ستبدأ المحادثة بعد موافقة الطرف الآخر.')));
     } catch (e) { if (mounted) setState(() => error = e.toString()); }
   }
@@ -135,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         content: SizedBox(width: 360, child: ListView.separated(
           shrinkWrap: true,
           itemCount: requests.length,
-          separatorBuilder: (_, __) => const Divider(),
+          separatorBuilder: (_, _) => const Divider(),
           itemBuilder: (context, index) {
             final request = requests[index];
             final sender = request['sender'] as Map<String, dynamic>?;
@@ -143,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             final username = sender?['username']?.toString();
             return ListTile(
               title: Text(displayName),
-              subtitle: Text(username == null ? 'طلب محادثة' : '@' + username),
+              subtitle: Text(username == null ? 'طلب محادثة' : '@\${username}'),
               trailing: FilledButton(
                 onPressed: () async {
                   Navigator.pop(dialogContext);
@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       appBar: AppBar(title: const Text('واصل', style: TextStyle(fontWeight: FontWeight.w900)),
         actions: [
         if (tab == 0) IconButton(onPressed: _showRequests, tooltip: 'طلبات التواصل', icon: const Icon(Icons.mark_email_unread_outlined)),
-        if (tab == 0) IconButton(onPressed: _newChat, tooltip: 'محادثة جديدة', icon: const Icon(Icons.edit_square_rounded)),
+        if (tab == 0) IconButton(onPressed: _newChat, tooltip: 'محادثة جديدة', icon: const Icon(Icons.edit_outlined)),
       ]),
       body: loading ? const Center(child: CircularProgressIndicator()) :
         error != null ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(error!, textAlign: TextAlign.center))) : pages[tab],
@@ -233,13 +233,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ]))),
     const SizedBox(height: 16),
     if (nearbyEnabled) ...[
-      Text('أشخاص حولك (' + nearby.length.toString() + ')', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+      Text('أشخاص حولك (\${nearby.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
       const SizedBox(height: 8),
       if (nearby.isEmpty) const Text('لا يوجد أشخاص ظاهرون بالقرب منك حالياً.'),
       ...nearby.map((person) => Card(child: ListTile(
         leading: const CircleAvatar(child: Icon(Icons.person_outline)),
         title: Text(person['display_name']?.toString() ?? 'مستخدم'),
-        subtitle: Text(person['username'] == null ? '' : '@' + person['username'].toString()),
+        subtitle: Text(person['username'] == null ? '' : '@\${person['username']}'),
         trailing: Text(_distanceLabel(person['distance_band']?.toString())),
       ))),
     ],
@@ -258,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       const CircleAvatar(radius: 36, child: Icon(Icons.person, size: 36)),
       const SizedBox(height: 12),
       Text(profile?['display_name']?.toString() ?? 'مستخدم واصل', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-      Text(profile?['username'] == null ? 'لم تضف يوزرنيم بعد' : '@' + profile!['username'].toString()),
+      Text(profile?['username'] == null ? 'لم تضف يوزرنيم بعد' : '@\${profile!['username']}'),
       const SizedBox(height: 16),
       OutlinedButton.icon(onPressed: _setUsername, icon: const Icon(Icons.alternate_email), label: const Text('تعديل اليوزرنيم')),
     ]))),
