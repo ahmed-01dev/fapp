@@ -1,0 +1,9 @@
+# Supabase CLI project configuration for WASEL.
+# Link this directory to the dedicated WASEL project before deploying.
+project_id = "wasel"
+
+[functions.health]
+verify_jwt = false
+
+[functions.account-bootstrap]
+verify_jwt = true
