@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
 const waselBg = Color(0xFF07080D);
