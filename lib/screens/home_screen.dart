@@ -410,7 +410,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ])),
       const SizedBox(height: 16),
       GlassPanel(padding: EdgeInsets.zero, child: Column(children: [
-        const ListTile(leading: Icon(Icons.shield_outlined, color: waselCyan), title: const Text('الخصوصية والأمان'), subtitle: const Text('إعدادات رقم الهاتف قيد الاستكمال')),
+        const ListTile(leading: Icon(Icons.shield_outlined, color: waselCyan), title: Text('الخصوصية والأمان'), subtitle: Text('إعدادات رقم الهاتف قيد الاستكمال')),
         const Divider(color: Colors.white10, height: 1),
         ListTile(leading: const Icon(Icons.logout_rounded, color: Color(0xFFFF7B8A)), title: const Text('تسجيل الخروج'), onTap: _signOut),
       ])),
