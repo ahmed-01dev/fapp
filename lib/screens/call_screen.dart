@@ -159,7 +159,9 @@ class _CallScreenState extends State<CallScreen> {
       } else {
         if (mounted) setState(() => _status = 'تم قبول المكالمة، في انتظار الطرف الآخر...');
       }
-      if (mounted) setState(() => _ready = true);
+      if (mounted) {
+        setState(() => _ready = true);
+      }
     } catch (error) {
       if (mounted) setState(() {
         _error = error.toString();
