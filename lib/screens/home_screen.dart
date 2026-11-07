@@ -26,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String? error;
   String searchQuery = '';
   Timer? nearbyTimer;
+  Timer? presenceTimer;
 
   @override
   void initState() {
@@ -34,12 +35,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     service = WaselService(Supabase.instance.client);
     pushNotifications = WaselPushNotifications();
     pushNotifications.initialize(service);
+    _setPresence(true);
+    presenceTimer = Timer.periodic(const Duration(seconds: 45), (_) => _setPresence(true));
     _load();
   }
 
   @override
   void dispose() {
     nearbyTimer?.cancel();
+    presenceTimer?.cancel();
+    _setPresence(false);
     pushNotifications.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -47,13 +52,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _setPresence(true);
+      presenceTimer?.cancel();
+      presenceTimer = Timer.periodic(const Duration(seconds: 45), (_) => _setPresence(true));
+    }
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
+      presenceTimer?.cancel();
+      _setPresence(false);
       nearbyTimer?.cancel();
       if (nearbyEnabled) {
         service.disableNearby();
         if (mounted) setState(() { nearbyEnabled = false; nearby = []; });
       }
     }
+  }
+
+  void _setPresence(bool online) {
+    service.setMyPresence(online).catchError((_) {});
   }
 
   Future<void> _load() async {
@@ -323,6 +339,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _signOut() async {
     await pushNotifications.disableCurrentToken(service);
     await pushNotifications.dispose();
+    presenceTimer?.cancel();
+    await service.setMyPresence(false);
     await service.disableNearby();
     await Supabase.instance.client.auth.signOut();
     if (mounted) Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const AuthScreen()), (_) => false);
