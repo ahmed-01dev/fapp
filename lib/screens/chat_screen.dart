@@ -57,6 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _safetyAction(String action) async {
     try {
       final otherId = await widget.service.otherParticipantId(widget.conversationId);
+      if (!mounted) return;
       if (otherId == null) {
         if (mounted) _showMessage('تعذر تحديد صاحب المحادثة.');
         return;
