@@ -42,10 +42,10 @@ The authenticated `call-ice-config` Edge Function is deployed and now supports C
 
 One-time setup:
 1. In the Cloudflare dashboard, open **Realtime → TURN Server** and create a TURN key.
-2. Create a scoped Cloudflare API token with the **Calls Write** permission for the relevant account. Do not use the Global API Key.
-3. In Supabase Dashboard → Project Settings → Edge Functions → Secrets (or the Edge Function secrets page), add these exact secrets:
-   - `CLOUDFLARE_TURN_KEY_ID`: the TURN key ID/UID returned when creating the TURN key.
-   - `CLOUDFLARE_TURN_API_TOKEN`: the API token used to generate temporary ICE credentials.
+2. When Cloudflare creates the TURN key, copy both its **UID** and its generated **key** (the TURN-key bearer secret). The key secret is not your general Cloudflare account API token.
+3. In Supabase Dashboard → Project Settings → Edge Functions → Secrets, add these exact secrets:
+   - `CLOUDFLARE_TURN_KEY_ID`: the TURN key UID.
+   - `CLOUDFLARE_TURN_KEY_SECRET`: the generated TURN key secret.
 4. Save the secrets. Do not send either value in chat, commit them to GitHub, or put them in Flutter build defines.
 
 The function calls Cloudflare's `generate-ice-servers` endpoint and returns the provider's ICE server list to the authenticated call participant. If Cloudflare credentials are absent, WASEL falls back to STUN only. Cloudflare documents a 1,000 GB monthly free allowance for Realtime TURN, then $0.05/GB egress; monitor usage and configure billing limits/alerts if available. TURN is used only when direct peer-to-peer connectivity fails.
