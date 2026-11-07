@@ -35,6 +35,29 @@ jobs:
           data["NSLocationWhenInUseUsageDescription"] = "يستخدم واصل موقعك فقط عند تفعيل ميزة الأشخاص القريبين."
           path.write_bytes(plistlib.dumps(data))
           PY
+      - name: Install Android NDK with retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [[ ! -x "$SDKMANAGER" ]]; then
+            echo "Android sdkmanager was not found at $SDKMANAGER"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null
+          for attempt in 1 2 3; do
+            echo "Installing Android NDK 28.2.13676358 (attempt $attempt/3)"
+            if "$SDKMANAGER" --sdk_root="$SDK_ROOT" "ndk;28.2.13676358" &&
+              test -f "$SDK_ROOT/ndk/28.2.13676358/source.properties"; then
+              echo "Android NDK 28.2.13676358 is installed."
+              exit 0
+            fi
+            rm -rf "$SDK_ROOT/ndk/28.2.13676358"
+            sleep $((attempt * 10))
+          done
+          echo "Could not install Android NDK 28.2.13676358 after 3 attempts."
+          exit 1
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
