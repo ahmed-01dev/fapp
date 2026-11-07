@@ -21,12 +21,17 @@ class WaselPushNotifications {
     if (platform == null) return;
 
     final messaging = FirebaseMessaging.instance;
-    final permission = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
+    NotificationSettings permission;
+    try {
+      permission = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+    } catch (_) {
+      return;
+    }
     if (permission.authorizationStatus == AuthorizationStatus.denied) return;
 
     try {
