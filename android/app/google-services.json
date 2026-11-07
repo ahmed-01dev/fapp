@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "882659322458",
+    "project_id": "wasel-f6468",
+    "storage_bucket": "wasel-f6468.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:882659322458:android:d911ee55c5ab4a05ef4663",
+        "android_client_info": {
+          "package_name": "com.wasel.app.wasel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqf1msCJYOoHX9cEE7yY4KAzSbZwW359c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
