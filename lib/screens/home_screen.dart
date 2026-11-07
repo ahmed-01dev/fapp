@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/wasel_service.dart';
+import '../services/push_notifications.dart';
 import '../widgets/glass_ui.dart';
 import 'auth_screen.dart';
 import 'chat_screen.dart';
@@ -15,6 +16,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late final WaselService service;
+  late final WaselPushNotifications pushNotifications;
   int tab = 0;
   List<Map<String, dynamic>> conversations = [];
   List<Map<String, dynamic>> nearby = [];
@@ -30,12 +32,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     service = WaselService(Supabase.instance.client);
+    pushNotifications = WaselPushNotifications();
+    pushNotifications.initialize(service);
     _load();
   }
 
   @override
   void dispose() {
     nearbyTimer?.cancel();
+    pushNotifications.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -316,6 +321,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _signOut() async {
+    await pushNotifications.disableCurrentToken(service);
+    await pushNotifications.dispose();
     await service.disableNearby();
     await Supabase.instance.client.auth.signOut();
     if (mounted) Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const AuthScreen()), (_) => false);
