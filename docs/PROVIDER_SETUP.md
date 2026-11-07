@@ -10,8 +10,20 @@ The authenticated `push-dispatch` Edge Function is deployed. It validates the ca
 1. Create a Firebase project and register the Android app with application ID `com.wasel.app.wasel` (confirm the generated ID in the Android build output before registering).
 2. Enable Firebase Cloud Messaging.
 3. For iOS, register the iOS bundle ID and upload an APNs authentication key in Firebase Console.
-4. Generate FlutterFire configuration using the FlutterFire CLI and add the generated public client configuration files to the Flutter repository. Do not include a service-account private key in the app.
-5. Add `firebase_core` and `firebase_messaging` to `pubspec.yaml`, initialize Firebase before the app starts, request notification permission, obtain the FCM token, and call `WaselService.registerPushToken(token, 'android'|'ios')`. On logout/token refresh call the matching registration or disable method.
+4. The Flutter project already includes `firebase_core` and `firebase_messaging`, initializes Firebase when build-time configuration is supplied, requests permission, registers the FCM token with Supabase, and refreshes the token on rotation.
+5. Build with the platform-specific Firebase client values from Firebase Console. These client values are not service-account secrets:
+
+```sh
+flutter build apk --release \
+  --dart-define=SUPABASE_URL=https://qxtqrdzvwncfvyvbevok.supabase.co \
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY \
+  --dart-define=FIREBASE_API_KEY=YOUR_FIREBASE_API_KEY \
+  --dart-define=FIREBASE_APP_ID=YOUR_ANDROID_FIREBASE_APP_ID \
+  --dart-define=FIREBASE_MESSAGING_SENDER_ID=YOUR_SENDER_ID \
+  --dart-define=FIREBASE_PROJECT_ID=YOUR_FIREBASE_PROJECT_ID
+```
+
+For an iOS build, use the iOS Firebase App ID and also pass `--dart-define=FIREBASE_IOS_BUNDLE_ID=YOUR_IOS_BUNDLE_ID`. Do not include a service-account private key in the app. On logout, the app disables the registered token; token refresh re-registers it.
 
 ### Server credential
 Create a Firebase service account that has permission to send FCM messages. Store its complete JSON privately as a Supabase Edge Function secret, never in GitHub or Flutter:
