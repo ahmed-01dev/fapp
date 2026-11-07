@@ -470,4 +470,8 @@ class WaselService {
         .limit(50);
     return List<Map<String, dynamic>>.from(rows);
   }
+
+  Future<void> setMyPresence(bool online) async {
+    await client.rpc('set_my_presence', params: {'p_online': online});
+  }
 }
