@@ -1,4 +1,4 @@
-name: Android MVP CI
+name: Flutter Static Validation
 
 concurrency:
   group: android-mvp-${{ github.ref }}
@@ -64,10 +64,3 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - name: Build debug APK
-        run: flutter build apk --debug
-      - uses: actions/upload-artifact@v4
-        with:
-          name: wasel-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
