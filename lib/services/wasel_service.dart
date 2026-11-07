@@ -388,4 +388,64 @@ class WaselService {
         'ended_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', callId);
   }
+
+  Future<void> sendReply(String conversationId, String body, String replyToId) async {
+    final text = body.trim();
+    if (text.isEmpty) return;
+    final row = await client.from('messages').insert({
+      'conversation_id': conversationId,
+      'sender_id': userId,
+      'body': text,
+      'message_type': 'text',
+      'reply_to': replyToId,
+    }).select('id').single();
+    try {
+      await client.functions.invoke('push-dispatch', body: {'message_id': row['id']});
+    } catch (_) {}
+  }
+
+  Future<void> editMessage(String messageId, String body) async {
+    final text = body.trim();
+    if (text.isEmpty || text.length > 10000) {
+      throw const FormatException('الرسالة يجب أن تكون بين 1 و10000 حرف.');
+    }
+    await client.from('messages').update({'body': text})
+        .eq('id', messageId).eq('sender_id', userId);
+  }
+
+  Future<void> deleteMessage(String messageId) async {
+    await client.from('messages').update({
+      'deleted_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', messageId).eq('sender_id', userId);
+  }
+
+  Future<List<Map<String, dynamic>>> searchMessages(String conversationId, String query) async {
+    final text = query.trim();
+    if (text.isEmpty) return [];
+    final rows = await client.from('messages')
+        .select('id,sender_id,body,message_type,created_at,edited_at')
+        .eq('conversation_id', conversationId)
+        .isFilter('deleted_at', null)
+        .ilike('body', '%$text%')
+        .order('created_at', ascending: false)
+        .limit(100);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<void> addConversationMember(String conversationId, String memberId) async {
+    await client.from('conversation_members').insert({
+      'conversation_id': conversationId,
+      'user_id': memberId,
+    });
+  }
+
+  Future<void> removeConversationMember(String conversationId, String memberId) async {
+    if (memberId == userId) {
+      await leaveConversation(conversationId);
+      return;
+    }
+    await client.from('conversation_members').delete()
+        .eq('conversation_id', conversationId)
+        .eq('user_id', memberId);
+  }
 }
