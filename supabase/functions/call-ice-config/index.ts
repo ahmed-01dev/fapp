@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
 
   // Cloudflare credentials are generated server-side and are short-lived.
   if (cloudflareKeyId && cloudflareApiToken) {
-    const ttl = 3600;
+    const ttl = 86400;
     const response = await fetch(
       `https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(cloudflareKeyId)}/credentials/generate-ice-servers`,
       {
