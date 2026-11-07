@@ -41,6 +41,7 @@ class _CallScreenState extends State<CallScreen> {
   bool _ready = false;
   bool _muted = false;
   bool _cameraOff = false;
+  bool _speakerOn = false;
   bool _ending = false;
   bool _allowPop = false;
   bool _remoteDescriptionSet = false;
@@ -73,6 +74,9 @@ class _CallScreenState extends State<CallScreen> {
       if (_isVideo) {
         _localRenderer.srcObject = _localStream;
       }
+      // Video calls start on speaker; audio calls start on the earpiece.
+      await Helper.setSpeakerphoneOn(_isVideo);
+      _speakerOn = _isVideo;
 
       final iceServers = await widget.service.getCallIceServers(widget.callId);
       final configuration = <String, dynamic>{
@@ -247,6 +251,16 @@ class _CallScreenState extends State<CallScreen> {
     if (mounted) setState(() => _cameraOff = next);
   }
 
+  Future<void> _toggleSpeaker() async {
+    final next = !_speakerOn;
+    try {
+      await Helper.setSpeakerphoneOn(next);
+      if (mounted) setState(() => _speakerOn = next);
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر تغيير مخرج الصوت: $error');
+    }
+  }
+
   Future<void> _switchCamera() async {
     final tracks = _localStream?.getVideoTracks() ?? [];
     if (tracks.isNotEmpty) await Helper.switchCamera(tracks.first);
@@ -375,6 +389,8 @@ class _CallScreenState extends State<CallScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _controlButton(_muted ? Icons.mic_off_rounded : Icons.mic_rounded, _toggleMicrophone, active: _muted),
+                      const SizedBox(width: 16),
+                      _controlButton(_speakerOn ? Icons.volume_up_rounded : Icons.hearing_rounded, _toggleSpeaker, active: _speakerOn),
                       if (_isVideo) ...[
                         const SizedBox(width: 16),
                         _controlButton(_cameraOff ? Icons.videocam_off_rounded : Icons.videocam_rounded, _toggleCamera, active: _cameraOff),
