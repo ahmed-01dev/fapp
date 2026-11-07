@@ -327,10 +327,9 @@ class WaselService {
   }
 
   Future<void> disablePushToken(String token) async {
-    await client.from('device_push_tokens').update({
-      'disabled_at': DateTime.now().toUtc().toIso8601String(),
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('token', token).eq('user_id', userId);
+    await client.from('device_push_tokens').delete()
+        .eq('token', token)
+        .eq('user_id', userId);
   }
 
   Future<String> startCall({
