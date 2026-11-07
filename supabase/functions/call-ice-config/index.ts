@@ -18,7 +18,7 @@ function base64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-async function createTurnPassword(username: string, sharedSecret: string): Promise<string> {
+async function createCoturnPassword(username: string, sharedSecret: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(sharedSecret),
@@ -72,24 +72,63 @@ Deno.serve(async (req: Request) => {
   }
 
   const iceServers: Array<Record<string, unknown>> = [
-    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+    { urls: ["stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"] },
   ];
+  const cloudflareKeyId = Deno.env.get("CLOUDFLARE_TURN_KEY_ID");
+  const cloudflareApiToken = Deno.env.get("CLOUDFLARE_TURN_API_TOKEN");
 
+  // Cloudflare credentials are generated server-side and are short-lived.
+  if (cloudflareKeyId && cloudflareApiToken) {
+    const ttl = 3600;
+    const response = await fetch(
+      `https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(cloudflareKeyId)}/credentials/generate-ice-servers`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${cloudflareApiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ttl }),
+      },
+    );
+    if (!response.ok) {
+      // Do not log or return provider response bodies or credentials.
+      return json({ error: "turn_provider_unavailable", provider: "cloudflare", status: response.status }, 502);
+    }
+    const result = await response.json();
+    if (!Array.isArray(result?.iceServers) || result.iceServers.length === 0) {
+      return json({ error: "turn_provider_invalid_response" }, 502);
+    }
+    return json({
+      iceServers: result.iceServers,
+      turnConfigured: true,
+      turnProvider: "cloudflare",
+      credentialTtlSeconds: ttl,
+    });
+  }
+
+  // Backward-compatible coturn mode, if a self-hosted relay is configured.
   const turnUrls = (Deno.env.get("TURN_URLS") ?? "")
     .split(/[;,]/).map((value) => value.trim())
     .filter((value) => /^(turn|turns):/i.test(value));
   const turnSecret = Deno.env.get("TURN_SHARED_SECRET");
-
   if (turnUrls.length > 0 && turnSecret) {
     const expiresAt = Math.floor(Date.now() / 1000) + 600;
     const username = `${expiresAt}:${authData.user.id}`;
-    const credential = await createTurnPassword(username, turnSecret);
+    const credential = await createCoturnPassword(username, turnSecret);
     iceServers.push({ urls: turnUrls, username, credential });
+    return json({
+      iceServers,
+      turnConfigured: true,
+      turnProvider: "coturn",
+      credentialTtlSeconds: 600,
+    });
   }
 
   return json({
     iceServers,
-    turnConfigured: turnUrls.length > 0 && Boolean(turnSecret),
-    credentialTtlSeconds: 600,
+    turnConfigured: false,
+    turnProvider: null,
+    credentialTtlSeconds: 0,
   });
 });
