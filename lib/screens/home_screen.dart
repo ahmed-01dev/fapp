@@ -119,6 +119,129 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     catch (e) { if (mounted) _message(e.toString()); }
   }
 
+  Future<void> _showCreateOptions() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF191824),
+      builder: (context) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(leading: const Icon(Icons.person_add_alt_1_rounded, color: waselCyan), title: const Text('محادثة خاصة'), onTap: () => Navigator.pop(context, 'direct')),
+        ListTile(leading: const Icon(Icons.groups_rounded, color: waselCyan), title: const Text('إنشاء مجموعة'), onTap: () => Navigator.pop(context, 'group')),
+        ListTile(leading: const Icon(Icons.campaign_outlined, color: waselCyan), title: const Text('إنشاء قناة'), onTap: () => Navigator.pop(context, 'channel')),
+        ListTile(leading: const Icon(Icons.explore_outlined, color: waselCyan), title: const Text('اكتشاف القنوات'), onTap: () => Navigator.pop(context, 'discover')),
+      ])),
+    );
+    switch (choice) {
+      case 'direct': await _newChat(); break;
+      case 'group': await _createGroup(); break;
+      case 'channel': await _createChannel(); break;
+      case 'discover': await _discoverChannels(); break;
+    }
+  }
+
+  Future<void> _createGroup() async {
+    final titleController = TextEditingController();
+    final usernameController = TextEditingController();
+    final values = await showDialog<List<String>>(context: context, builder: (context) => AlertDialog(
+      backgroundColor: const Color(0xFF191824),
+      title: const Text('إنشاء مجموعة'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: titleController, decoration: const InputDecoration(labelText: 'اسم المجموعة')),
+        const SizedBox(height: 10),
+        TextField(controller: usernameController, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'يوزرنيم عضو (اختياري)', prefixText: '@')),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+        FilledButton(onPressed: () => Navigator.pop(context, [titleController.text, usernameController.text]), child: const Text('إنشاء')),
+      ],
+    ));
+    titleController.dispose();
+    usernameController.dispose();
+    if (values == null || values.first.trim().isEmpty) return;
+    try {
+      final memberIds = <String>[];
+      if (values[1].trim().isNotEmpty) {
+        final found = await service.searchUsername(values[1]);
+        if (found.isEmpty) { _message('مش لاقيين اليوزر ده.'); return; }
+        memberIds.add(found.first['id'] as String);
+      }
+      final id = await service.createGroup(values.first, memberIds);
+      await _load();
+      if (mounted) _message('تم إنشاء المجموعة. تقدر تضيف أعضاء من جهات اتصالك.');
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(
+        service: service, conversationId: id, title: values.first.trim(),
+      )));
+      await _load();
+    } catch (e) { if (mounted) _message('تعذر إنشاء المجموعة: $e'); }
+  }
+
+  Future<void> _createChannel() async {
+    final titleController = TextEditingController();
+    final usernameController = TextEditingController();
+    final values = await showDialog<List<String>>(context: context, builder: (context) => AlertDialog(
+      backgroundColor: const Color(0xFF191824),
+      title: const Text('إنشاء قناة عامة'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: titleController, decoration: const InputDecoration(labelText: 'اسم القناة')),
+        const SizedBox(height: 10),
+        TextField(controller: usernameController, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'معرّف القناة', prefixText: '@')),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+        FilledButton(onPressed: () => Navigator.pop(context, [titleController.text, usernameController.text]), child: const Text('إنشاء')),
+      ],
+    ));
+    titleController.dispose();
+    usernameController.dispose();
+    if (values == null || values.first.trim().isEmpty) return;
+    try {
+      final id = await service.createChannel(title: values.first, username: values[1]);
+      await _load();
+      if (mounted) _message('تم إنشاء القناة العامة.');
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(
+        service: service, conversationId: id, title: values.first.trim(),
+      )));
+      await _load();
+    } catch (e) { if (mounted) _message('تعذر إنشاء القناة: $e'); }
+  }
+
+  Future<void> _discoverChannels() async {
+    final controller = TextEditingController();
+    final query = await showDialog<String>(context: context, builder: (context) => AlertDialog(
+      backgroundColor: const Color(0xFF191824),
+      title: const Text('اكتشاف القنوات'),
+      content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(hintText: 'ابحث باسم القناة')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+        FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('بحث')),
+      ],
+    ));
+    controller.dispose();
+    if (query == null || query.trim().isEmpty) return;
+    try {
+      final channels = await service.searchPublicChannels(query);
+      if (!mounted) return;
+      if (channels.isEmpty) { _message('مفيش قنوات مطابقة للبحث.'); return; }
+      final selected = await showDialog<Map<String, dynamic>>(context: context, builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF191824),
+        title: const Text('نتائج البحث'),
+        content: SizedBox(width: 360, child: ListView(
+          shrinkWrap: true,
+          children: channels.map((channel) => ListTile(
+            leading: const Icon(Icons.campaign_outlined, color: waselCyan),
+            title: Text(channel['title']?.toString() ?? 'قناة'),
+            subtitle: Text(channel['username'] == null ? 'قناة عامة' : '@${channel['username']}'),
+            onTap: () => Navigator.pop(context, channel),
+          )).toList(),
+        )),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق'))],
+      ));
+      if (selected == null) return;
+      await service.joinPublicChannel(selected['id'] as String);
+      await _load();
+      await _openChat({...selected, 'kind': 'channel'});
+    } catch (e) { if (mounted) _message('تعذر البحث عن القنوات: $e'); }
+  }
+
   Future<void> _newChat() async {
     final controller = TextEditingController();
     final username = await showDialog<String>(context: context, builder: (context) => AlertDialog(
@@ -184,7 +307,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _openChat(Map<String, dynamic> item) async {
     final person = item['other_user'] as Map<String, dynamic>?;
-    final title = person?['display_name']?.toString() ?? 'محادثة';
+    final kind = item['kind']?.toString() ?? 'direct';
+    final title = kind == 'direct' ? (person?['display_name']?.toString() ?? 'محادثة') : (item['title']?.toString() ?? 'محادثة');
     await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(
       service: service, conversationId: item['id'] as String, title: title,
     )));
@@ -213,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: KeyedSubtree(key: ValueKey(tab), child: [ _chats(), _nearby(), _profile() ][tab]),
           ))),
       floatingActionButton: tab == 0 ? FloatingActionButton(
-        onPressed: _newChat,
+        onPressed: _showCreateOptions,
         backgroundColor: waselPurple,
         foregroundColor: Colors.white,
         elevation: 12,
@@ -317,7 +441,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           return searchQuery.isEmpty || name.contains(searchQuery) || username.contains(searchQuery);
         }).map((item) {
           final person = item['other_user'] as Map<String, dynamic>?;
-          final name = person?['display_name']?.toString() ?? 'محادثة';
+          final kind = item['kind']?.toString() ?? 'direct';
+          final name = kind == 'direct'
+              ? (person?['display_name']?.toString() ?? 'محادثة')
+              : (item['title']?.toString() ?? 'محادثة');
           final username = person?['username']?.toString();
           return Padding(padding: const EdgeInsets.only(bottom: 10), child: Material(
             color: Colors.transparent,
@@ -330,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                   const SizedBox(height: 5),
-                  Text(username == null ? 'محادثة خاصة' : '@$username', style: const TextStyle(color: Color(0xFF9996AA), fontSize: 12)),
+                  Text(kind == 'group' ? 'مجموعة' : kind == 'channel' ? 'قناة عامة' : (username == null ? 'محادثة خاصة' : '@$username'), style: const TextStyle(color: Color(0xFF9996AA), fontSize: 12)),
                 ])),
                 const Icon(Icons.chevron_left_rounded, color: Color(0xFF777487)),
               ])),
