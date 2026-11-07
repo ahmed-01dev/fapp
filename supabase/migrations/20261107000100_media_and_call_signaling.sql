@@ -119,7 +119,7 @@ create or replace function private.guard_call_session_update()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 begin
   if new.id <> old.id
     or new.conversation_id <> old.conversation_id
@@ -145,7 +145,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 revoke all on function private.guard_call_session_update() from public, anon, authenticated;
 drop trigger if exists call_sessions_guard_update on public.call_sessions;
 create trigger call_sessions_guard_update
