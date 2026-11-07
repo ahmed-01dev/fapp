@@ -27,9 +27,10 @@ The following migrations have been applied to the live WASEL project and are rec
 13. `20261107001000_group_invite_safety.sql` — accepted-contact invitations and member removal controls.
 14. `20261107001100_ownership_transfer.sql` — group/channel ownership transfer.
 15. `20261107001200_reduce_rpc_privileges.sql` — converts exposed creation RPCs to invoker rights.
-16. `advisor_security_hardening` (live security adjustment)
+16. `20261107001300_user_presence.sql` — contact-scoped online and last-seen presence.
+17. `advisor_security_hardening` (live security adjustment)
 
-The live database currently reports 18 public tables with RLS enabled, 8 public tables in the Realtime publication, and the private `chat-media` bucket. These are schema checks, not end-to-end user acceptance tests.
+The live database currently reports 19 public tables with RLS enabled, 9 public tables in the Realtime publication, and the private `chat-media` bucket. These are schema checks, not end-to-end user acceptance tests.
 
 For future changes, add a new timestamped migration under `supabase/migrations/`, review it, apply it to WASEL only, and verify migration history and advisors.
 
