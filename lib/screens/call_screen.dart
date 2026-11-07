@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import '../services/wasel_permissions.dart';
 
 import '../services/wasel_service.dart';
 import '../widgets/glass_ui.dart';
@@ -58,6 +59,11 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _initialize() async {
     try {
+      if (mounted) setState(() => _status = 'بنطلب إذن الميكروفون${_isVideo ? " والكاميرا" : ""}...');
+      final granted = await WaselPermissions.requestCallPermissions(video: _isVideo);
+      if (!granted) {
+        throw StateError('لازم تسمح باستخدام الميكروفون${_isVideo ? " والكاميرا" : ""} عشان المكالمة تشتغل. لو رفضت الإذن نهائياً، افتح إعدادات التطبيق وفعّله يدوياً.');
+      }
       await _localRenderer.initialize();
       await _remoteRenderer.initialize();
       _localStream = await navigator.mediaDevices.getUserMedia({
@@ -375,8 +381,19 @@ class _CallScreenState extends State<CallScreen> {
               Positioned(
                 left: 18,
                 right: 18,
-                bottom: 120,
-                child: Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFFF8794), fontSize: 12)),
+                bottom: 116,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFFF8794), fontSize: 12)),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: WaselPermissions.canOpenSettings,
+                      icon: const Icon(Icons.settings_outlined, size: 17),
+                      label: const Text('فتح إعدادات الأذونات'),
+                    ),
+                  ],
+                ),
               ),
             Positioned(
               left: 20,
