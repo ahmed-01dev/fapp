@@ -1,37 +1,50 @@
 # WASEL — واصل
 
-Cross-platform messaging app foundation for Android and iOS. Working product name: WASEL; final brand name can be changed later.
+Flutter messaging app foundation for Android and iOS. The dedicated Supabase backend is live; this is still an MVP under development, not a production WhatsApp/Telegram replacement.
 
-## MVP scope
-- Phone-number-only SMS OTP authentication using E.164.
-- Unique optional username, searchable without exposing phone numbers.
-- 1:1 conversations and realtime text messages.
-- Nearby is strictly opt-in, off by default, approximate-distance only, and backed by short-lived presence records.
-- Arabic RTL + English, light/dark themes.
+## Live backend
+- Supabase project: `qxtqrdzvwncfvyvbevok`
+- URL: `https://qxtqrdzvwncfvyvbevok.supabase.co`
+- Database migrations: 18 recorded entries including the initial baseline, safety hardening, groups/channels, media, calls, presence, and key-directory access controls.
+- Edge Functions: `health`, `account-bootstrap`, `push-dispatch` (deployed and ACTIVE).
+- 19 public tables with RLS enabled; 9 public tables in Realtime.
+- Private `chat-media` Storage bucket with a 50 MiB limit.
 
-Not included yet: Signal Protocol E2EE, media upload, group/channel administration, WebRTC calls, bots, stories, scheduled messages, and multi-device cloud sync. These require separate security and infrastructure milestones.
+Never deploy WASEL migrations to the NEXORA project.
 
-## Architecture
-- Mobile: Flutter, Material 3, Supabase Flutter client.
-- Auth: Supabase Auth phone OTP with an SMS provider configured in the dashboard. Never put provider secrets in the app.
-- API/data: PostgreSQL with RLS; Supabase Realtime for message updates.
-- Nearby: private PostGIS-backed presence table and RPCs. Exact coordinates are never returned to clients; results expose only a coarse distance band. Presence expires after 30 minutes.
-- Files later: private S3-compatible storage with signed, short-lived URLs and server-side size/type validation.
-- Calls later: WebRTC with TURN; push via FCM/APNs.
+## Implemented foundations
+- Phone OTP screen and Supabase Auth integration; real SMS delivery still requires a configured SMS provider.
+- Profile bootstrap, username search, contact requests and direct conversations.
+- Realtime text chat, replies, edit/delete, reactions, pins, typing indicator, and read-receipt writes.
+- Group and public channel creation/discovery foundations; basic group/channel chat.
+- Private media upload, image preview, and signed file opening for common image/video/audio/document formats.
+- Block/report controls for direct conversations and block-aware Nearby discovery.
+- Expiring online/last-seen and Nearby presence.
+- Call session/signaling schema and Flutter signaling service methods.
+- Public device-key directory and one-time prekey bundle retrieval foundation.
+- FCM dispatch Edge Function and Firebase Messaging client token registration code.
+
+## Not yet production-complete
+- Real SMS OTP requires provider setup and end-to-end testing.
+- Push requires Firebase Android/iOS app configuration, APNs key for iOS, and Supabase secret `FCM_SERVICE_ACCOUNT_JSON`.
+- WebRTC audio/video media, TURN relay, call UI, and incoming-call background handling are not implemented.
+- Signal Protocol client encryption, secure persistent key stores, device verification, and encrypted backups are not implemented. Messages are currently not E2EE.
+- Resumable/background media transfer, in-app audio/video players, thumbnails, malware scanning, and quotas remain.
+- Group/channel administration, broadcast tools, stories, bots, and multi-device synchronization remain incomplete.
+- Two-account RLS/realtime integration tests, moderation workflows, monitoring, backup/restore, retention and incident response remain.
 
 ## Run locally
-1. Install Flutter stable and create platform folders if absent: flutter create --platforms=android,ios .
-2. Copy .env.example to .env and set Supabase project URL and publishable key.
-3. Run flutter pub get.
-4. Review and run database/schema.sql in the Supabase SQL Editor.
-5. In Supabase Auth, enable Phone provider, configure an SMS provider, set OTP expiry/rate limits, and enable CAPTCHA/abuse protection before public testing.
-6. Explicitly expose required tables to the Data API and apply the grants/RLS from the SQL script.
-7. Run with --dart-define=SUPABASE_URL=... and --dart-define=SUPABASE_PUBLISHABLE_KEY=...
+1. Install Flutter stable.
+2. Generate platform folders if absent: `flutter create --platforms=android,ios --org com.wasel.app .`
+3. Run `flutter pub get`.
+4. Supply the Supabase URL and publishable key with `--dart-define` values.
+5. For Firebase push, follow [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md).
+6. Run `flutter analyze` and `flutter test`.
 
-No service-role key belongs in a mobile app. Do not commit real credentials or production user data.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), [docs/FREE_BACKEND_PLAN.md](docs/FREE_BACKEND_PLAN.md), and [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md).
 
-## Important security notes
-- Phone visibility defaults to contacts; phone-number search is not implemented until a consent-aware discovery endpoint exists.
-- Nearby is off by default. The client must request explicit opt-in before location permission or updates.
-- Username uniqueness is enforced by a case-insensitive unique index.
-- Text chat in this foundation is not end-to-end encrypted yet. Do not market it as E2EE until audited Signal Protocol sessions, identity/key backup, device verification, and attachment encryption are implemented.
+## Security
+- Never ship service-role keys, database passwords, SMS credentials, Firebase service-account JSON, or TURN secrets in the app.
+- RLS is enabled on all current public tables.
+- Nearby is opt-in and exposes only coarse distance bands, never raw coordinates.
+- Do not claim end-to-end encryption until an audited Signal Protocol client and secure key lifecycle are implemented and tested.
