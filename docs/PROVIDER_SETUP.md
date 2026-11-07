@@ -81,5 +81,5 @@ The private `chat-media` bucket is deployed with a 50 MiB limit and MIME allowli
 ## Current live project
 - Project ref: `qxtqrdzvwncfvyvbevok`
 - Project URL: `https://qxtqrdzvwncfvyvbevok.supabase.co`
-- Edge Functions: `health`, `account-bootstrap`, `push-dispatch`
+- Edge Functions: `health`, `account-bootstrap`, `push-dispatch`, `call-dispatch`, `call-ice-config`
 - Do not use the older NEXORA project.
