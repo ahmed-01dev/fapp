@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
     { urls: ["stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"] },
   ];
   const cloudflareKeyId = Deno.env.get("CLOUDFLARE_TURN_KEY_ID");
-  const cloudflareApiToken = Deno.env.get("CLOUDFLARE_TURN_API_TOKEN");
+  const cloudflareApiToken = Deno.env.get("CLOUDFLARE_TURN_KEY_SECRET");
 
   // Cloudflare credentials are generated server-side and are short-lived.
   if (cloudflareKeyId && cloudflareApiToken) {
