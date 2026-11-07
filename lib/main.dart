@@ -4,7 +4,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
-import 'services/push_notifications.dart';
 import 'widgets/glass_ui.dart';
 
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
