@@ -87,7 +87,7 @@ begin
   )
   on conflict (user_id) do update set
     online_until = case when p_online then now() + interval '90 seconds' else null end,
-    last_seen_at = case when p_online then public.user_presence.last_seen_at else now() end,
+    last_seen_at = case when p_online then user_presence.last_seen_at else now() end,
     updated_at = now();
 end;
 $$;
