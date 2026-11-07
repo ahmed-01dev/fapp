@@ -187,7 +187,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       final id = await service.createGroup(values.first, memberIds);
       await _load();
-      if (mounted) _message('تم إنشاء المجموعة. تقدر تضيف أعضاء من جهات اتصالك.');
+      if (!mounted) return;
+      _message('تم إنشاء المجموعة. تقدر تضيف أعضاء من جهات اتصالك.');
       await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(
         service: service, conversationId: id, title: values.first.trim(), kind: 'group',
       )));
@@ -217,7 +218,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final id = await service.createChannel(title: values.first, username: values[1]);
       await _load();
-      if (mounted) _message('تم إنشاء القناة العامة.');
+      if (!mounted) return;
+      _message('تم إنشاء القناة العامة.');
       await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(
         service: service, conversationId: id, title: values.first.trim(), kind: 'channel',
       )));
