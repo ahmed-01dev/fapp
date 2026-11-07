@@ -36,16 +36,21 @@ supabase secrets set FCM_SERVICE_ACCOUNT_JSON="$(cat /secure/path/firebase-servi
 
 The Edge Function runtime provides the Supabase URL and service-role key. Confirm that `push-dispatch` returns a successful result with a real authenticated test account and a registered device token. Until Firebase setup and a token registration are complete, push delivery is not active even though the function is deployed.
 
-### TURN relay credentials (required for reliable calls across restrictive networks)
+### TURN relay credentials (Cloudflare Realtime TURN)
 
-The authenticated `call-ice-config` Edge Function is deployed. It checks that the signed-in user is a participant in an active call and returns short-lived ICE credentials. It supports the standard coturn TURN REST shared-secret mechanism; the shared secret never leaves Supabase. Temporary credentials expire after 10 minutes.
+The authenticated `call-ice-config` Edge Function is deployed and now supports Cloudflare Realtime TURN. It verifies that the signed-in user belongs to an active call, then asks Cloudflare to issue ICE credentials valid for one hour. The Cloudflare API token and TURN key remain server-side; only expiring ICE credentials are returned to the app.
 
-Set these Supabase Edge Function secrets only after a TURN server/provider is selected:
+One-time setup:
+1. In the Cloudflare dashboard, open **Realtime → TURN Server** and create a TURN key.
+2. Create a scoped Cloudflare API token with the **Calls Write** permission for the relevant account. Do not use the Global API Key.
+3. In Supabase Dashboard → Project Settings → Edge Functions → Secrets (or the Edge Function secrets page), add these exact secrets:
+   - `CLOUDFLARE_TURN_KEY_ID`: the TURN key ID/UID returned when creating the TURN key.
+   - `CLOUDFLARE_TURN_API_TOKEN`: the API token used to generate temporary ICE credentials.
+4. Save the secrets. Do not send either value in chat, commit them to GitHub, or put them in Flutter build defines.
 
-- `TURN_URLS`: comma-separated TURN URIs, for example `turn:turn.example.com:3478?transport=udp,turns:turn.example.com:5349?transport=tcp`.
-- `TURN_SHARED_SECRET`: the coturn REST API shared secret configured on that TURN server.
+The function calls Cloudflare's `generate-ice-servers` endpoint and returns the provider's ICE server list to the authenticated call participant. If Cloudflare credentials are absent, WASEL falls back to STUN only. Cloudflare documents a 1,000 GB monthly free allowance for Realtime TURN, then $0.05/GB egress; monitor usage and configure billing limits/alerts if available. TURN is used only when direct peer-to-peer connectivity fails.
 
-Do not use example hostnames or generate fake credentials. With these secrets absent, WASEL deliberately falls back to public STUN; calls may fail behind carrier-grade NAT, symmetric NAT, or restrictive firewalls. A TURN relay requires an actual reachable server and may incur bandwidth charges. The client requests fresh credentials from `call-ice-config` per call; no long-lived TURN password is embedded in the APK.
+The older `TURN_URLS` + `TURN_SHARED_SECRET` coturn configuration remains supported as a fallback for a self-hosted TURN server. Do not set placeholder hostnames or fake credentials.
 
 ## Phone OTP
 
