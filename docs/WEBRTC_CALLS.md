@@ -36,6 +36,14 @@ iOS: add these keys inside `ios/Runner/Info.plist`:
 
 The plugin documentation lists the native permissions and platform requirements: https://flutter-webrtc.org/docs/flutter-webrtc/project-settings/
 
+## TURN credential flow
+
+The client calls the authenticated `call-ice-config` function for each active call. The function verifies call participation and returns a STUN fallback plus short-lived coturn REST credentials when `TURN_URLS` and `TURN_SHARED_SECRET` are configured. The TURN shared secret must remain in Supabase Edge Function secrets; never embed it in Flutter or GitHub.
+
+## Encryption status
+
+WebRTC already uses DTLS-SRTP for transport encryption. This is not the same as WASEL-managed end-to-end media encryption. The current call screen does not yet exchange a per-call media key or enable FrameCryptor, so do not claim media E2EE yet. The flutter_webrtc project documents a FrameCryptor API for a second E2EE layer, but it must receive a strong per-call key through an authenticated end-to-end key agreement, not a hard-coded shared password.
+
 ## Important current limitations
 - Incoming call UI is shown while the relevant conversation screen is open. Background/terminated incoming-call delivery is not implemented yet; it requires push call notifications and Android call-notification/foreground-service integration (plus APNs/CallKit for iOS).
 - Public STUN servers do not relay media. Some carrier, office, school, and symmetric-NAT networks require TURN. Until TURN is configured, a call may fail to connect on those networks.
