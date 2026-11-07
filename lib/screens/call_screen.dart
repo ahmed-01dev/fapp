@@ -289,7 +289,12 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) unawaited(_endCall());
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFF090A12),
       body: SafeArea(
         child: Stack(
@@ -377,7 +382,7 @@ class _CallScreenState extends State<CallScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _controlButton(
