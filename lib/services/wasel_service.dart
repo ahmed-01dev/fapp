@@ -347,7 +347,12 @@ class WaselService {
       'call_type': callType,
       'status': 'ringing',
     }).select('id').single();
-    return row['id'] as String;
+    final callId = row['id'] as String;
+    // Push is best-effort: a provider outage must not prevent an in-app call.
+    try {
+      await client.functions.invoke('call-dispatch', body: {'call_id': callId});
+    } catch (_) {}
+    return callId;
   }
 
   Future<void> sendCallSignal({
