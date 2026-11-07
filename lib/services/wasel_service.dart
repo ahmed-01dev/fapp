@@ -280,7 +280,7 @@ class WaselService {
         .replaceAll(RegExp(r'_+'), '_');
     final random = Random.secure();
     final suffix = List.generate(12, (_) => random.nextInt(16).toRadixString(16)).join();
-    final path = '$conversationId/$userId/${DateTime.now().microsecondsSinceEpoch}_$suffix_${safeName.isEmpty ? 'upload' : safeName}';
+    final path = '$conversationId/$userId/${DateTime.now().microsecondsSinceEpoch}_${suffix}_${safeName.isEmpty ? 'upload' : safeName}';
     await client.storage.from('chat-media').uploadBinary(
       path,
       bytes,
