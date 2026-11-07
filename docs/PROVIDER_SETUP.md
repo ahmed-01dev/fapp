@@ -4,13 +4,13 @@ The WASEL Supabase project is live at `qxtqrdzvwncfvyvbevok`. Provider credentia
 
 ## Push notifications (FCM for Android and iOS)
 
-The authenticated `push-dispatch` Edge Function is deployed. It validates the caller, confirms the message belongs to that caller, excludes blocked recipients, fetches active device tokens, and sends generic notification text without exposing message contents.
+The authenticated `push-dispatch` and `call-dispatch` Edge Functions are deployed. `push-dispatch` handles new-message notifications; `call-dispatch` validates the authenticated caller and ringing call session, checks both block directions, and sends a short-lived generic incoming-call notification to the callee's active device tokens. It validates the caller, confirms the message belongs to that caller, excludes blocked recipients, fetches active device tokens, and sends generic notification text without exposing message contents.
 
 ### Required Firebase setup
-1. Create a Firebase project and register the Android app with application ID `com.wasel.app.wasel` (confirm the generated ID in the Android build output before registering).
+1. Create a Firebase project and register the Android app with application ID `com.wasel.app.wasel`. This is the expected ID from `flutter create --org com.wasel.app` for the package name `wasel`; keep it unchanged when registering the Firebase Android app.
 2. Enable Firebase Cloud Messaging.
 3. For iOS, register the iOS bundle ID and upload an APNs authentication key in Firebase Console.
-4. The Flutter project already includes `firebase_core` and `firebase_messaging`, initializes Firebase when build-time configuration is supplied, requests permission, registers the FCM token with Supabase, and refreshes the token on rotation.
+4. The Flutter project already includes `firebase_core` and `firebase_messaging`, initializes Firebase when build-time configuration is supplied, requests notification permission, registers the FCM token with Supabase, and refreshes the token on rotation. Incoming-call push delivery is best-effort and requires the Android Firebase app registration, an installed build with the matching Firebase client configuration, a registered device token, and the server secret below. A push notification does not yet provide a full-screen native call UI or guarantee wake-up on every Android device.
 5. Build with the platform-specific Firebase client values from Firebase Console. These client values are not service-account secrets:
 
 ```sh
