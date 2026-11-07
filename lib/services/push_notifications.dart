@@ -35,6 +35,7 @@ class WaselPushNotifications {
     if (permission.authorizationStatus == AuthorizationStatus.denied) return;
 
     try {
+      // ignore: deprecated_member_use
       final token = await messaging.getToken();
       if (token != null && token.isNotEmpty) {
         _lastToken = token;
@@ -45,6 +46,7 @@ class WaselPushNotifications {
     }
 
     await _tokenSubscription?.cancel();
+    // ignore: deprecated_member_use
     _tokenSubscription = messaging.onTokenRefresh.listen((token) async {
       if (token.isEmpty) return;
       final previous = _lastToken;
@@ -59,6 +61,7 @@ class WaselPushNotifications {
   }
 
   Future<void> disableCurrentToken(WaselService service) async {
+    // ignore: deprecated_member_use
     final token = _lastToken ?? await FirebaseMessaging.instance.getToken();
     if (token == null || token.isEmpty) return;
     try {
