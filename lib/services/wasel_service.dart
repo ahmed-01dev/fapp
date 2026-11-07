@@ -448,4 +448,24 @@ class WaselService {
         .eq('conversation_id', conversationId)
         .eq('user_id', memberId);
   }
+
+  Future<void> transferConversationOwnership(String conversationId, String newOwnerId) async {
+    await client.rpc('transfer_conversation_ownership', params: {
+      'p_conversation_id': conversationId,
+      'p_new_owner_id': newOwnerId,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> searchPublicChannels(String query) async {
+    final text = query.trim();
+    if (text.isEmpty) return [];
+    final rows = await client.from('conversations')
+        .select('id,title,description,username,created_at')
+        .eq('kind', 'channel')
+        .eq('is_public', true)
+        .ilike('title', '%$text%')
+        .order('created_at', ascending: false)
+        .limit(50);
+    return List<Map<String, dynamic>>.from(rows);
+  }
 }
