@@ -62,9 +62,6 @@ begin
   update public.conversation_members
     set role = 'owner'
     where conversation_id = p_conversation_id and user_id = p_new_owner_id;
-  update public.conversations
-    set created_by = p_new_owner_id, updated_at = now()
-    where id = p_conversation_id;
 end;
 $$;
 revoke all on function public.transfer_conversation_ownership(uuid,uuid) from public, anon;
