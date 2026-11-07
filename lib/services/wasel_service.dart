@@ -139,4 +139,98 @@ class WaselService {
     final rows = await client.rpc('nearby_matches');
     return List<Map<String, dynamic>>.from(rows as List);
   }
+
+  Future<String> createGroup(String title, List<String> memberIds) async {
+    final result = await client.rpc('create_group', params: {
+      'p_title': title.trim(),
+      'p_member_ids': memberIds,
+    });
+    return result as String;
+  }
+
+  Future<String> createChannel({
+    required String title,
+    String? username,
+    String? description,
+  }) async {
+    final result = await client.rpc('create_channel', params: {
+      'p_title': title.trim(),
+      'p_username': username?.trim(),
+      'p_description': description?.trim(),
+    });
+    return result as String;
+  }
+
+  Future<void> joinPublicChannel(String conversationId) async {
+    await client.from('conversation_members').upsert({
+      'conversation_id': conversationId,
+      'user_id': userId,
+    }, onConflict: 'conversation_id,user_id', ignoreDuplicates: true);
+  }
+
+  Future<void> leaveConversation(String conversationId) async {
+    await client.from('conversation_members').delete()
+        .eq('conversation_id', conversationId)
+        .eq('user_id', userId);
+  }
+
+  Future<void> markMessageDelivered(String messageId) async {
+    await client.from('message_receipts').upsert({
+      'message_id': messageId,
+      'user_id': userId,
+      'delivered_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'message_id,user_id', ignoreDuplicates: true);
+  }
+
+  Future<void> markMessageRead(String messageId) async {
+    await client.from('message_receipts').upsert({
+      'message_id': messageId,
+      'user_id': userId,
+      'delivered_at': DateTime.now().toUtc().toIso8601String(),
+      'read_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'message_id,user_id');
+  }
+
+  Future<void> toggleReaction(String messageId, String emoji, {required bool add}) async {
+    if (add) {
+      await client.from('message_reactions').upsert({
+        'message_id': messageId,
+        'user_id': userId,
+        'emoji': emoji,
+      }, onConflict: 'message_id,user_id,emoji', ignoreDuplicates: true);
+    } else {
+      await client.from('message_reactions').delete()
+          .eq('message_id', messageId)
+          .eq('user_id', userId)
+          .eq('emoji', emoji);
+    }
+  }
+
+  Future<void> pinMessage(String conversationId, String messageId) async {
+    await client.from('pinned_messages').upsert({
+      'conversation_id': conversationId,
+      'message_id': messageId,
+      'pinned_by': userId,
+    }, onConflict: 'conversation_id,message_id', ignoreDuplicates: true);
+  }
+
+  Future<void> unpinMessage(String conversationId, String messageId) async {
+    await client.from('pinned_messages').delete()
+        .eq('conversation_id', conversationId)
+        .eq('message_id', messageId);
+  }
+
+  Future<void> setTyping(String conversationId, {required bool typing}) async {
+    if (typing) {
+      await client.from('typing_presence').upsert({
+        'conversation_id': conversationId,
+        'user_id': userId,
+        'expires_at': DateTime.now().toUtc().add(const Duration(seconds: 8)).toIso8601String(),
+      }, onConflict: 'conversation_id,user_id');
+    } else {
+      await client.from('typing_presence').delete()
+          .eq('conversation_id', conversationId)
+          .eq('user_id', userId);
+    }
+  }
 }
