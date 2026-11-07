@@ -1,0 +1,45 @@
+name: Verify WASEL Android
+
+on:
+  push:
+    branches:
+      - main
+      - fix/runtime-permissions-and-call-ux
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-pub
+
+      - name: Run tests
+        run: flutter test --no-pub
+
+      - name: Build debug APK
+        run: flutter build apk --debug --no-pub
