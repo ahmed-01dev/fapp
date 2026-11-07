@@ -6,8 +6,8 @@ import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'widgets/glass_ui.dart';
 
-const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-const supabaseKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+const supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://qxtqrdzvwncfvyvbevok.supabase.co');
+const supabaseKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY', defaultValue: 'sb_publishable_tgCavvVI9q8Pk3h2gYKCeQ_d2hROLp3p');
 const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
 const firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
 const firebaseMessagingSenderId = String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
