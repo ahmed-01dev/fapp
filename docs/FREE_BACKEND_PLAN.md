@@ -23,12 +23,12 @@ Do not deploy to the NEXORA project.
 |---|---|
 | Basic text send/read | Flutter and Supabase integration exists; two-device acceptance test still required |
 | Realtime messages | Schema publication and stream client exist; two-account RLS/realtime tests required |
-| Groups/channels | Database lifecycle/RPCs exist; complete UI, discovery, moderation and tests remain |
-| Read receipts | Tables and basic client write path exist; delivered/read UI and robust realtime updates remain |
-| Media | Private bucket and upload/signed URL service methods exist; picker/player/resumable UI and malware controls remain |
-| Push | Dispatch function deployed; Firebase client, device token acquisition and service-account secret still required |
+| Groups/channels | Group/channel creation and public channel discovery UI are wired; member moderation UI and two-account tests remain |
+| Read receipts | Tables and realtime read-receipt write path are wired; delivery/read status indicators and comprehensive tests remain |
+| Media | Private bucket, upload/signed URL methods, file picker, image preview and external file opening are wired; resumable upload, in-app players, thumbnails and malware controls remain |
+| Push | FCM dispatch function and Firebase client token/refresh registration are wired; Firebase project values and server service-account secret still required |
 | OTP | UI flow exists; SMS provider and real Egyptian number test still required |
-| Calls | Signaling schema exists; WebRTC client, TURN, background call UX and tests not implemented |
+| Calls | Signaling schema and Flutter session/signal service methods exist; WebRTC media, TURN, call UI, background incoming-call handling and tests remain |
 | E2EE | Public-key directory exists only; Signal Protocol, client crypto and secure key lifecycle not implemented |
 | Operations | Monitoring, scheduled cleanup, backups, abuse response and production runbooks remain |
 
@@ -43,7 +43,7 @@ Do not deploy to the NEXORA project.
 ## Immediate remaining work
 1. Configure Firebase/FCM and APNs; set `FCM_SERVICE_ACCOUNT_JSON` as a Supabase Edge Function secret.
 2. Add Firebase client SDK initialization and automatic device token registration/refresh.
-3. Finish the media attachment picker/player and background upload.
+3. Finish resumable media uploads, in-app audio/video players, thumbnails and background transfer.
 4. Implement and test Signal Protocol encryption.
 5. Implement WebRTC voice/video calls and TURN.
 6. Add integration tests for two authenticated users, blocking, reports, groups, channels, receipts, storage access and call state transitions.
