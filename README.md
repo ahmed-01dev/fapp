@@ -20,7 +20,7 @@ Never deploy WASEL migrations to the NEXORA project.
 - Private media upload, image preview, and signed file opening for common image/video/audio/document formats.
 - Block/report controls for direct conversations and block-aware Nearby discovery.
 - Expiring online/last-seen and Nearby presence.
-- Call session/signaling schema and Flutter signaling service methods.
+- WebRTC audio/video calling client flow, offer/answer and ICE signaling, call controls, and foreground incoming-call banner in an open direct chat. Device-to-device acceptance testing and TURN/background call handling remain.
 - Public device-key directory and one-time prekey bundle retrieval foundation.
 - FCM dispatch Edge Function and Firebase Messaging client token registration code.
 
