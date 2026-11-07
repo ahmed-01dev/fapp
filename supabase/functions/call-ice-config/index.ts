@@ -74,6 +74,41 @@ Deno.serve(async (req: Request) => {
   const iceServers: Array<Record<string, unknown>> = [
     { urls: ["stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"] },
   ];
+  // Metered static credential mode. Secrets stay server-side and are returned
+  // only to an authenticated participant in an active call.
+  const meteredUsername = Deno.env.get("METERED_TURN_USERNAME");
+  const meteredCredential = Deno.env.get("METERED_TURN_CREDENTIAL");
+  if (meteredUsername && meteredCredential) {
+    iceServers.push(
+      {
+        urls: "turn:standard.relay.metered.ca:80",
+        username: meteredUsername,
+        credential: meteredCredential,
+      },
+      {
+        urls: "turn:standard.relay.metered.ca:80?transport=tcp",
+        username: meteredUsername,
+        credential: meteredCredential,
+      },
+      {
+        urls: "turn:standard.relay.metered.ca:443",
+        username: meteredUsername,
+        credential: meteredCredential,
+      },
+      {
+        urls: "turns:standard.relay.metered.ca:443?transport=tcp",
+        username: meteredUsername,
+        credential: meteredCredential,
+      },
+    );
+    return json({
+      iceServers,
+      turnConfigured: true,
+      turnProvider: "metered",
+      credentialTtlSeconds: 0,
+    });
+  }
+
   const cloudflareKeyId = Deno.env.get("CLOUDFLARE_TURN_KEY_ID");
   const cloudflareApiToken = Deno.env.get("CLOUDFLARE_TURN_KEY_SECRET");
 
