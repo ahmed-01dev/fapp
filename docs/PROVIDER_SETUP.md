@@ -38,7 +38,7 @@ The Edge Function runtime provides the Supabase URL and service-role key. Confir
 
 ### TURN relay credentials (Cloudflare Realtime TURN)
 
-The authenticated `call-ice-config` Edge Function is deployed and now supports Cloudflare Realtime TURN. It verifies that the signed-in user belongs to an active call, then asks Cloudflare to issue ICE credentials valid for one hour. The Cloudflare API token and TURN key remain server-side; only expiring ICE credentials are returned to the app.
+The authenticated `call-ice-config` Edge Function is deployed and now supports Cloudflare Realtime TURN. It verifies that the signed-in user belongs to an active call, then asks Cloudflare to issue ICE credentials valid for 24 hours. The Cloudflare API token and TURN key remain server-side; only expiring ICE credentials are returned to the app.
 
 One-time setup:
 1. In the Cloudflare dashboard, open **Realtime → TURN Server** and create a TURN key.
