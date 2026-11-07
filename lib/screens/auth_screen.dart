@@ -43,11 +43,8 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() { _busy = true; _error = null; });
     try {
       final response = await Supabase.instance.client.auth.verifyOTP(phone: phone, token: token, type: OtpType.sms);
-      final user = response.user;
-      if (user != null) {
-        await Supabase.instance.client.from('profiles').upsert({
-          'id': user.id, 'display_name': 'مستخدم جديد',
-        }, onConflict: 'id', ignoreDuplicates: true);
+      if (response.user != null) {
+        await Supabase.instance.client.functions.invoke('account-bootstrap');
       }
       if (mounted) Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     } on AuthException catch (e) {
