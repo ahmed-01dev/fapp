@@ -329,4 +329,63 @@ class WaselService {
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('token', token).eq('user_id', userId);
   }
+
+  Future<String> startCall({
+    required String conversationId,
+    required String calleeId,
+    String callType = 'audio',
+  }) async {
+    if (!{'audio', 'video'}.contains(callType) || calleeId == userId) {
+      throw const FormatException('بيانات المكالمة غير صالحة.');
+    }
+    final row = await client.from('call_sessions').insert({
+      'conversation_id': conversationId,
+      'caller_id': userId,
+      'callee_id': calleeId,
+      'call_type': callType,
+      'status': 'ringing',
+    }).select('id').single();
+    return row['id'] as String;
+  }
+
+  Future<void> sendCallSignal({
+    required String callId,
+    required String signalType,
+    required Map<String, dynamic> payload,
+  }) async {
+    if (!{'offer', 'answer', 'ice', 'hangup'}.contains(signalType)) {
+      throw const FormatException('نوع إشارة المكالمة غير صالح.');
+    }
+    await client.from('call_signals').insert({
+      'call_id': callId,
+      'sender_id': userId,
+      'signal_type': signalType,
+      'payload': payload,
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> watchCallSignals(String callId) {
+    return client.from('call_signals')
+        .stream(primaryKey: ['id'])
+        .eq('call_id', callId)
+        .order('created_at');
+  }
+
+  Stream<List<Map<String, dynamic>>> watchCallSession(String callId) {
+    return client.from('call_sessions')
+        .stream(primaryKey: ['id'])
+        .eq('id', callId);
+  }
+
+  Future<void> updateCallStatus(String callId, String status) async {
+    if (!{'accepted', 'rejected', 'missed', 'ended'}.contains(status)) {
+      throw const FormatException('حالة المكالمة غير صالحة.');
+    }
+    await client.from('call_sessions').update({
+      'status': status,
+      if (status == 'accepted') 'answered_at': DateTime.now().toUtc().toIso8601String(),
+      if ({'rejected', 'missed', 'ended'}.contains(status))
+        'ended_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', callId);
+  }
 }
