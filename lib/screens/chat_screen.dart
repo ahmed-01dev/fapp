@@ -6,10 +6,11 @@ import '../services/wasel_service.dart';
 import '../widgets/glass_ui.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.service, required this.conversationId, required this.title});
+  const ChatScreen({super.key, required this.service, required this.conversationId, required this.title, this.kind = 'direct'});
   final WaselService service;
   final String conversationId;
   final String title;
+  final String kind;
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
@@ -387,7 +388,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             const Text('محادثة خاصة', style: TextStyle(color: waselCyan, fontSize: 11)),
           ])),
-          PopupMenuButton<String>(
+          if (widget.kind == 'direct') PopupMenuButton<String>(
             icon: const Icon(Icons.more_horiz_rounded, color: Colors.white70),
             color: const Color(0xFF242132),
             onSelected: _safetyAction,
