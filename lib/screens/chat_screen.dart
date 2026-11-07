@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -25,12 +26,41 @@ class _ChatScreenState extends State<ChatScreen> {
   String? error;
   Map<String, dynamic>? replyTarget;
   final Set<String> readReceiptSent = {};
+  Timer? typingTimer;
+  bool typingSent = false;
+  DateTime? lastTypingRefresh;
   final Map<String, Future<String>> mediaUrlCache = {};
 
   @override
   void initState() { super.initState(); _load(); }
   @override
-  void dispose() { input.dispose(); focus.dispose(); scroll.dispose(); super.dispose(); }
+  void dispose() {
+    typingTimer?.cancel();
+    if (typingSent) { widget.service.setTyping(widget.conversationId, typing: false); }
+    input.dispose(); focus.dispose(); scroll.dispose(); super.dispose();
+  }
+
+  void _onTypingChanged(String value) {
+    if (value.trim().isEmpty) {
+      typingTimer?.cancel();
+      if (typingSent) { widget.service.setTyping(widget.conversationId, typing: false); }
+      typingSent = false;
+      lastTypingRefresh = null;
+      return;
+    }
+    final now = DateTime.now();
+    if (!typingSent || lastTypingRefresh == null || now.difference(lastTypingRefresh!) >= const Duration(seconds: 4)) {
+      widget.service.setTyping(widget.conversationId, typing: true);
+      typingSent = true;
+      lastTypingRefresh = now;
+    }
+    typingTimer?.cancel();
+    typingTimer = Timer(const Duration(seconds: 6), () {
+      widget.service.setTyping(widget.conversationId, typing: false);
+      typingSent = false;
+      lastTypingRefresh = null;
+    });
+  }
 
   Future<void> _load() async {
     try {
@@ -52,6 +82,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final body = input.text.trim();
     if (body.isEmpty || sending) return;
     input.clear();
+    _onTypingChanged('');
     setState(() { sending = true; error = null; });
     try {
       final target = replyTarget;
@@ -387,7 +418,22 @@ class _ChatScreenState extends State<ChatScreen> {
           const SizedBox(width: 11),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            Text(widget.kind == 'group' ? 'مجموعة' : widget.kind == 'channel' ? 'قناة عامة' : 'محادثة خاصة', style: const TextStyle(color: waselCyan, fontSize: 11)),
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: Supabase.instance.client.from('typing_presence')
+                  .stream(primaryKey: ['conversation_id', 'user_id'])
+                  .eq('conversation_id', widget.conversationId),
+              builder: (context, snapshot) {
+                final now = DateTime.now().toUtc();
+                final someoneTyping = snapshot.data?.any((row) =>
+                  row['user_id'] != widget.service.userId &&
+                  DateTime.tryParse(row['expires_at']?.toString() ?? '')?.isAfter(now) == true
+                ) ?? false;
+                return Text(
+                  someoneTyping ? 'يكتب الآن...' : (widget.kind == 'group' ? 'مجموعة' : widget.kind == 'channel' ? 'قناة عامة' : 'محادثة خاصة'),
+                  style: TextStyle(color: someoneTyping ? waselCyan : const Color(0xFF9996AA), fontSize: 11),
+                );
+              },
+            ),
           ])),
           if (widget.kind == 'direct') PopupMenuButton<String>(
             icon: const Icon(Icons.more_horiz_rounded, color: Colors.white70),
@@ -490,6 +536,7 @@ class _ChatScreenState extends State<ChatScreen> {
           IconButton(onPressed: sending ? null : _pickAndSendMedia, icon: const Icon(Icons.add_circle_outline_rounded, color: waselCyan)),
           Expanded(child: TextField(
             controller: input, focusNode: focus, minLines: 1, maxLines: 5,
+            onChanged: _onTypingChanged,
             textInputAction: TextInputAction.newline,
             decoration: const InputDecoration(hintText: 'اكتب رسالتك هنا...', filled: false, border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 5)),
           )),
