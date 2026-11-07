@@ -163,10 +163,12 @@ class _CallScreenState extends State<CallScreen> {
         setState(() => _ready = true);
       }
     } catch (error) {
-      if (mounted) setState(() {
-        _error = error.toString();
-        _status = 'تعذر بدء المكالمة';
-      });
+      if (mounted) {
+        setState(() {
+          _error = error.toString();
+          _status = 'تعذر بدء المكالمة';
+        });
+      }
     }
   }
 
