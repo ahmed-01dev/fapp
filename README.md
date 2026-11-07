@@ -5,7 +5,7 @@ Flutter messaging app foundation for Android and iOS. The dedicated Supabase bac
 ## Live backend
 - Supabase project: `qxtqrdzvwncfvyvbevok`
 - URL: `https://qxtqrdzvwncfvyvbevok.supabase.co`
-- Database migrations: 18 recorded entries including the initial baseline, safety hardening, groups/channels, media, calls, presence, and key-directory access controls.
+- Database migrations: 19 recorded entries including the initial baseline, safety hardening, groups/channels, media, calls, presence, and key-directory access controls.
 - Edge Functions: `health`, `account-bootstrap`, `push-dispatch` (deployed and ACTIVE).
 - 19 public tables with RLS enabled; 9 public tables in Realtime.
 - Private `chat-media` Storage bucket with a 50 MiB limit.
