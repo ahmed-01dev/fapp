@@ -29,6 +29,13 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _load() async {
     try {
       final rows = await widget.service.loadMessages(widget.conversationId);
+      final incomingIds = rows
+          .where((row) => row['sender_id'] != widget.service.userId)
+          .map((row) => row['id'] as String)
+          .toList();
+      if (incomingIds.isNotEmpty) {
+        try { await widget.service.markMessagesRead(incomingIds); } catch (_) {}
+      }
       if (mounted) setState(() { messages = rows; loading = false; });
     } catch (e) {
       if (mounted) setState(() { error = e.toString(); loading = false; });
