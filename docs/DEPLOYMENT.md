@@ -63,7 +63,8 @@ Never put the Supabase service-role key, database password, SMS provider credent
 - Complete Firebase client setup, register device tokens, and set `FCM_SERVICE_ACCOUNT_JSON`.
 - Basic file picking, private upload, image preview, and signed file opening are wired; resumable/background uploads, in-app audio/video players, thumbnails, malware scanning, and quota controls remain.
 - Integrate a maintained Signal Protocol client before claiming E2EE.
-- Integrate Flutter WebRTC, TURN credentials, call UI, and background incoming-call handling.
+- Complete native Android/iOS scaffolding and microphone/camera permissions for the integrated Flutter WebRTC call screen; verify audio/video calls on two physical devices and separate networks.
+- Configure TURN relay for restrictive NAT/carrier networks and implement background/terminated incoming-call delivery (Android call notifications/foreground service; APNs/CallKit for iOS).
 - Add automated RLS tests using two separate authenticated accounts.
 - Test blocking/reporting and all message/group/channel flows end to end.
 - Review advisor warnings and performance indexes against actual query patterns.
