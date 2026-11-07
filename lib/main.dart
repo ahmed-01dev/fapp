@@ -1,17 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
+import 'services/push_notifications.dart';
 import 'widgets/glass_ui.dart';
 
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const supabaseKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
+const firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
+const firebaseMessagingSenderId = String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
+const firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
+const firebaseIosBundleId = String.fromEnvironment('FIREBASE_IOS_BUNDLE_ID');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final configured = supabaseUrl.startsWith('https://') && supabaseKey.isNotEmpty && !supabaseKey.contains('REPLACE_ME');
   if (configured) await Supabase.initialize(url: supabaseUrl, publishableKey: supabaseKey);
+  final firebaseConfigured = firebaseApiKey.isNotEmpty &&
+      firebaseAppId.isNotEmpty &&
+      firebaseMessagingSenderId.isNotEmpty &&
+      firebaseProjectId.isNotEmpty;
+  if (firebaseConfigured) {
+    await Firebase.initializeApp(options: FirebaseOptions(
+      apiKey: firebaseApiKey,
+      appId: firebaseAppId,
+      messagingSenderId: firebaseMessagingSenderId,
+      projectId: firebaseProjectId,
+      iosBundleId: firebaseIosBundleId.isEmpty ? null : firebaseIosBundleId,
+    ));
+  }
   runApp(WaselApp(configured: configured));
 }
 
