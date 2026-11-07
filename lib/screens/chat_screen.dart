@@ -112,7 +112,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _pickAndSendMedia() async {
     if (sending) return;
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker().pickFiles(
         type: FileType.any,
         allowMultiple: false,
         withData: true,
