@@ -11,11 +11,11 @@ Do not deploy to the NEXORA project.
 
 ## What is deployed
 - Postgres schema for profiles, direct conversations, groups/channels, members, messages, receipts, reactions, pins, typing presence, contact requests, blocks, reports, nearby presence, push token registry, call sessions/signaling, and device public-key directory.
-- RLS is enabled on all 18 current public tables.
+- RLS is enabled on all 19 current public tables; 9 public tables are in the Realtime publication.
 - Realtime publication includes 8 public tables.
 - Private `chat-media` Storage bucket with 50 MiB object limit and MIME allowlist.
 - Edge Functions: `health`, `account-bootstrap`, `push-dispatch`.
-- Database RPCs for Nearby, group creation and channel creation.
+- Database RPCs for Nearby, group creation, channel creation, device-key bundle retrieval, and online presence.
 - Flutter service methods for text, group/channel lifecycle, media upload/signed URLs, receipts, reactions, pins, typing presence, and device-token registration.
 
 ## Not yet production-complete
@@ -25,6 +25,7 @@ Do not deploy to the NEXORA project.
 | Realtime messages | Schema publication and stream client exist; two-account RLS/realtime tests required |
 | Groups/channels | Group/channel creation and public channel discovery UI are wired; member moderation UI and two-account tests remain |
 | Read receipts | Tables and realtime read-receipt write path are wired; delivery/read status indicators and comprehensive tests remain |
+| Presence | Expiring online/last-seen database presence and chat header indicator are wired; privacy settings and multi-device edge cases remain |
 | Media | Private bucket, upload/signed URL methods, file picker, image preview and external file opening are wired; resumable upload, in-app players, thumbnails and malware controls remain |
 | Push | FCM dispatch function and Firebase client token/refresh registration are wired; Firebase project values and server service-account secret still required |
 | OTP | UI flow exists; SMS provider and real Egyptian number test still required |
