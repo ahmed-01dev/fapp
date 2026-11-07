@@ -54,6 +54,68 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _safetyAction(String action) async {
+    try {
+      final otherId = await widget.service.otherParticipantId(widget.conversationId);
+      if (otherId == null) {
+        if (mounted) _showMessage('تعذر تحديد صاحب المحادثة.');
+        return;
+      }
+      if (action == 'block') {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            backgroundColor: const Color(0xFF191824),
+            title: const Text('حظر المستخدم؟'),
+            content: const Text('لن يتمكن هذا الحساب من إرسال طلبات تواصل إليك أو الظهور لك ضمن القريبين.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('حظر'),
+              ),
+            ],
+          ),
+        );
+        if (confirm != true) return;
+        await widget.service.blockUser(otherId);
+        if (!mounted) return;
+        _showMessage('تم حظر المستخدم.');
+        Navigator.pop(context);
+        return;
+      }
+
+      const reasons = <String, String>{
+        'spam': 'رسائل مزعجة أو سبام',
+        'harassment': 'مضايقة أو إساءة',
+        'impersonation': 'انتحال شخصية',
+        'scam': 'احتيال أو نصب',
+        'unsafe_content': 'محتوى غير آمن',
+        'other': 'سبب آخر',
+      };
+      final reason = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => SimpleDialog(
+          backgroundColor: const Color(0xFF191824),
+          title: const Text('الإبلاغ عن المستخدم'),
+          children: reasons.entries.map((entry) => SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, entry.key),
+            child: Text(entry.value),
+          )).toList(),
+        ),
+      );
+      if (reason == null) return;
+      await widget.service.reportUser(reportedUserId: otherId, reason: reason);
+      if (mounted) _showMessage('تم إرسال البلاغ للمراجعة.');
+    } catch (e) {
+      if (mounted) _showMessage('تعذر تنفيذ الطلب: $e');
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final myId = Supabase.instance.client.auth.currentUser!.id;
@@ -69,7 +131,29 @@ class _ChatScreenState extends State<ChatScreen> {
             Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             const Text('محادثة خاصة', style: TextStyle(color: waselCyan, fontSize: 11)),
           ])),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.more_horiz_rounded, color: Colors.white70)),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_horiz_rounded, color: Colors.white70),
+            color: const Color(0xFF242132),
+            onSelected: _safetyAction,
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'report',
+                child: Row(children: [
+                  Icon(Icons.flag_outlined, color: waselCyan, size: 19),
+                  SizedBox(width: 10),
+                  Text('إبلاغ عن المستخدم'),
+                ]),
+              ),
+              PopupMenuItem(
+                value: 'block',
+                child: Row(children: [
+                  Icon(Icons.block_rounded, color: Color(0xFFFF7B8A), size: 19),
+                  SizedBox(width: 10),
+                  Text('حظر المستخدم'),
+                ]),
+              ),
+            ],
+          ),
         ])),
         Expanded(child: StreamBuilder<List<Map<String, dynamic>>>(
           stream: Supabase.instance.client.from('messages').stream(primaryKey: ['id']).eq('conversation_id', widget.conversationId).order('created_at'),
