@@ -386,7 +386,7 @@ class _ChatScreenState extends State<ChatScreen> {
           const SizedBox(width: 11),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            const Text('محادثة خاصة', style: TextStyle(color: waselCyan, fontSize: 11)),
+            Text(widget.kind == 'group' ? 'مجموعة' : widget.kind == 'channel' ? 'قناة عامة' : 'محادثة خاصة', style: const TextStyle(color: waselCyan, fontSize: 11)),
           ])),
           if (widget.kind == 'direct') PopupMenuButton<String>(
             icon: const Icon(Icons.more_horiz_rounded, color: Colors.white70),
