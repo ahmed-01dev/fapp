@@ -22,11 +22,11 @@ Never deploy WASEL migrations to the NEXORA project.
 - Expiring online/last-seen and Nearby presence.
 - WebRTC audio/video calling client flow, offer/answer and ICE signaling, call controls, and foreground incoming-call banner in an open direct chat. Device-to-device acceptance testing and TURN/background call handling remain.
 - Public device-key directory and one-time prekey bundle retrieval foundation.
-- FCM dispatch Edge Function and Firebase Messaging client token registration code.
+- FCM message dispatch and incoming-call dispatch Edge Functions; Firebase Messaging client token registration code.
 
 ## Not yet production-complete
 - Real SMS OTP requires provider setup and end-to-end testing.
-- Push requires Firebase Android/iOS app configuration, APNs key for iOS, and Supabase secret `FCM_SERVICE_ACCOUNT_JSON`.
+- Push requires Firebase Android/iOS app configuration, a registered device token, and Supabase secret `FCM_SERVICE_ACCOUNT_JSON`; iOS additionally requires an APNs key. Incoming-call push currently shows a generic notification only, not a full-screen native call UI.
 - WebRTC audio/video media, TURN relay, call UI, and incoming-call background handling are not implemented.
 - Signal Protocol client encryption, secure persistent key stores, device verification, and encrypted backups are not implemented. Messages are currently not E2EE.
 - Resumable/background media transfer, in-app audio/video players, thumbnails, malware scanning, and quotas remain.
@@ -35,7 +35,7 @@ Never deploy WASEL migrations to the NEXORA project.
 
 ## Run locally
 1. Install Flutter stable.
-2. Generate platform folders if absent: `flutter create --platforms=android,ios --org com.wasel.app .`
+2. Generate the Android platform if absent: `flutter create --platforms=android --org com.wasel.app .` (Android application ID: `com.wasel.app.wasel`).
 3. Run `flutter pub get`.
 4. Supply the Supabase URL and publishable key with `--dart-define` values.
 5. For Firebase push, follow [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md).
