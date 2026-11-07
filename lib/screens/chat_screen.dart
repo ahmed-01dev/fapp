@@ -22,6 +22,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool loading = true;
   bool sending = false;
   String? error;
+  Map<String, dynamic>? replyTarget;
   final Map<String, Future<String>> mediaUrlCache = {};
 
   @override
@@ -51,7 +52,12 @@ class _ChatScreenState extends State<ChatScreen> {
     input.clear();
     setState(() { sending = true; error = null; });
     try {
-      await widget.service.sendMessage(widget.conversationId, body);
+      if (replyTarget case final target?) {
+        await widget.service.sendReply(widget.conversationId, body, target['id'] as String);
+      } else {
+        await widget.service.sendMessage(widget.conversationId, body);
+      }
+      if (mounted) setState(() => replyTarget = null);
       await _load();
       if (scroll.hasClients) scroll.animateTo(scroll.position.maxScrollExtent + 120, duration: const Duration(milliseconds: 260), curve: Curves.easeOut);
     } catch (e) {
@@ -195,6 +201,113 @@ class _ChatScreenState extends State<ChatScreen> {
     return Text(message['body']?.toString() ?? '', style: const TextStyle(color: Colors.white, height: 1.45, fontSize: 14));
   }
 
+  Future<void> _showMessageActions(Map<String, dynamic> message) async {
+    final mine = message['sender_id'] == widget.service.userId;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF191824),
+      builder: (context) => SafeArea(child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.reply_rounded, color: waselCyan),
+            title: const Text('رد على الرسالة'),
+            onTap: () => Navigator.pop(context, 'reply'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.add_reaction_outlined, color: waselCyan),
+            title: const Text('إضافة تفاعل'),
+            onTap: () => Navigator.pop(context, 'react'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.push_pin_outlined, color: waselCyan),
+            title: const Text('تثبيت الرسالة'),
+            onTap: () => Navigator.pop(context, 'pin'),
+          ),
+          if (mine) ListTile(
+            leading: const Icon(Icons.edit_outlined, color: waselCyan),
+            title: const Text('تعديل الرسالة'),
+            onTap: () => Navigator.pop(context, 'edit'),
+          ),
+          if (mine) ListTile(
+            leading: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF7B8A)),
+            title: const Text('حذف الرسالة'),
+            onTap: () => Navigator.pop(context, 'delete'),
+          ),
+        ],
+      )),
+    );
+    if (action == null || !mounted) return;
+    try {
+      final id = message['id'] as String;
+      switch (action) {
+        case 'reply':
+          setState(() => replyTarget = message);
+          focus.requestFocus();
+          break;
+        case 'react':
+          final emoji = await showDialog<String>(
+            context: context,
+            builder: (context) => SimpleDialog(
+              backgroundColor: const Color(0xFF191824),
+              title: const Text('اختار تفاعل'),
+              children: ['❤️', '👍', '😂', '😮', '😢', '🔥'].map((value) =>
+                SimpleDialogOption(
+                  onPressed: () => Navigator.pop(context, value),
+                  child: Text(value, style: const TextStyle(fontSize: 26)),
+                )).toList(),
+            ),
+          );
+          if (emoji != null) await widget.service.toggleReaction(id, emoji, add: true);
+          break;
+        case 'pin':
+          await widget.service.pinMessage(widget.conversationId, id);
+          if (mounted) _showMessage('تم تثبيت الرسالة.');
+          break;
+        case 'edit':
+          final controller = TextEditingController(text: message['body']?.toString() ?? '');
+          final edited = await showDialog<String>(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: const Color(0xFF191824),
+              title: const Text('تعديل الرسالة'),
+              content: TextField(controller: controller, autofocus: true, maxLines: 4),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+                FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('حفظ')),
+              ],
+            ),
+          );
+          controller.dispose();
+          if (edited != null) {
+            await widget.service.editMessage(id, edited);
+            await _load();
+          }
+          break;
+        case 'delete':
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: const Color(0xFF191824),
+              title: const Text('حذف الرسالة؟'),
+              content: const Text('سيتم إخفاؤها من المحادثة.'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+                FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+              ],
+            ),
+          );
+          if (confirm == true) {
+            await widget.service.deleteMessage(id);
+            await _load();
+          }
+          break;
+      }
+    } catch (e) {
+      if (mounted) _showMessage('تعذر تنفيذ الإجراء: $e');
+    }
+  }
+
   Future<void> _safetyAction(String action) async {
     try {
       final otherId = await widget.service.otherParticipantId(widget.conversationId);
@@ -319,7 +432,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 final mine = message['sender_id'] == myId;
                 return Align(
                   alignment: mine ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
-                  child: Container(
+                  child: GestureDetector(
+                    onLongPress: () => _showMessageActions(Map<String, dynamic>.from(message)),
+                    child: Container(
                     constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .78),
                     margin: const EdgeInsets.symmetric(vertical: 5),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -334,6 +449,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       boxShadow: mine ? [BoxShadow(color: waselPurple.withValues(alpha: .14), blurRadius: 18, offset: const Offset(0, 5))] : null,
                     ),
                     child: _messageContent(Map<String, dynamic>.from(message)),
+                    ),
                   ),
                 );
               },
@@ -341,6 +457,15 @@ class _ChatScreenState extends State<ChatScreen> {
           },
         )),
         if (error != null && messages.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(error!, style: const TextStyle(color: Color(0xFFFF8794), fontSize: 11))),
+        if (replyTarget != null) Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: GlassPanel(radius: 14, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), child: Row(children: [
+            const Icon(Icons.reply_rounded, color: waselCyan, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text('رد على: ${replyTarget?['body'] ?? 'مرفق'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))),
+            IconButton(onPressed: () => setState(() => replyTarget = null), icon: const Icon(Icons.close_rounded, size: 18)),
+          ])),
+        ),
         Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 10), child: GlassPanel(radius: 25, padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7), opacity: .95, child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
           IconButton(onPressed: sending ? null : _pickAndSendMedia, icon: const Icon(Icons.add_circle_outline_rounded, color: waselCyan)),
           Expanded(child: TextField(
