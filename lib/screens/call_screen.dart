@@ -70,7 +70,9 @@ class _CallScreenState extends State<CallScreen> {
               }
             : false,
       });
-      if (_isVideo) _localRenderer.srcObject = _localStream;
+      if (_isVideo) {
+        _localRenderer.srcObject = _localStream;
+      }
 
       final configuration = <String, dynamic>{
         'iceServers': [
