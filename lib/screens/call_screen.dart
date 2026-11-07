@@ -74,11 +74,9 @@ class _CallScreenState extends State<CallScreen> {
         _localRenderer.srcObject = _localStream;
       }
 
+      final iceServers = await widget.service.getCallIceServers(widget.callId);
       final configuration = <String, dynamic>{
-        'iceServers': [
-          {'urls': 'stun:stun.l.google.com:19302'},
-          {'urls': 'stun:stun1.l.google.com:19302'},
-        ],
+        'iceServers': iceServers,
         'sdpSemantics': 'unified-plan',
       };
       _peer = await createPeerConnection(configuration);
