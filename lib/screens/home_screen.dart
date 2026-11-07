@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -27,6 +28,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String searchQuery = '';
   Timer? nearbyTimer;
   Timer? presenceTimer;
+  StreamSubscription<RemoteMessage>? _pushTapSubscription;
+  bool _openingPushConversation = false;
 
   @override
   void initState() {
@@ -35,6 +38,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     service = WaselService(Supabase.instance.client);
     pushNotifications = WaselPushNotifications();
     pushNotifications.initialize(service);
+    _pushTapSubscription = FirebaseMessaging.onMessageOpenedApp.listen(_openConversationFromPush);
+    unawaited(_handleInitialPush());
     _setPresence(true);
     presenceTimer = Timer.periodic(const Duration(seconds: 45), (_) => _setPresence(true));
     _load();
@@ -46,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     presenceTimer?.cancel();
     _setPresence(false);
     pushNotifications.dispose();
+    _pushTapSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -70,6 +76,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _setPresence(bool online) {
     service.setMyPresence(online).catchError((_) {});
+  }
+
+  Future<void> _handleInitialPush() async {
+    if (Firebase.apps.isEmpty) return;
+    try {
+      final message = await FirebaseMessaging.instance.getInitialMessage();
+      if (message != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_openConversationFromPush(message));
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _openConversationFromPush(RemoteMessage message) async {
+    if (_openingPushConversation || !mounted) return;
+    final conversationId = message.data['conversation_id']?.toString();
+    if (conversationId == null || conversationId.isEmpty) return;
+    _openingPushConversation = true;
+    try {
+      final items = await service.loadConversations();
+      if (!mounted) return;
+      Map<String, dynamic>? match;
+      for (final item in items) {
+        if (item['id']?.toString() == conversationId) {
+          match = item;
+          break;
+        }
+      }
+      if (match != null && mounted) {
+        await _openChat(match);
+      }
+    } catch (_) {
+      if (mounted) _message('وصل إشعار جديد، لكن تعذر فتح المحادثة.');
+    } finally {
+      _openingPushConversation = false;
+    }
   }
 
   Future<void> _load() async {
