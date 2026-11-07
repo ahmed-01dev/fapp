@@ -52,7 +52,8 @@ class _ChatScreenState extends State<ChatScreen> {
     input.clear();
     setState(() { sending = true; error = null; });
     try {
-      if (replyTarget case final target?) {
+      final target = replyTarget;
+      if (target != null) {
         await widget.service.sendReply(widget.conversationId, body, target['id'] as String);
       } else {
         await widget.service.sendMessage(widget.conversationId, body);
