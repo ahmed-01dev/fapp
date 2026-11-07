@@ -110,12 +110,14 @@ class _CallScreenState extends State<CallScreen> {
       _peer!.onConnectionState = (state) {
         if (!mounted) return;
         final value = state.toString().toLowerCase();
-        if (value.contains('connected')) {
-          setState(() => _status = 'متصل');
+        // Check "disconnected" before "connected": the former contains
+        // the latter as a substring.
+        if (value.contains('disconnected')) {
+          setState(() => _status = 'الاتصال انقطع، بنحاول نرجعه...');
         } else if (value.contains('failed')) {
           setState(() => _status = 'الاتصال فشل؛ قد نحتاج خادم TURN لهذه الشبكة.');
-        } else if (value.contains('disconnected')) {
-          setState(() => _status = 'الاتصال انقطع، بنحاول نرجعه...');
+        } else if (value.contains('connected') || value.contains('completed')) {
+          setState(() => _status = 'متصل');
         }
       };
 
