@@ -94,11 +94,15 @@ jobs:
               settings.write_text(text)
 
           text = app.read_text()
-          if marker not in text:
-              anchor = 'id("com.android.application")'
-              if anchor not in text:
-                  raise SystemExit("Could not locate Android application plugin in app/build.gradle.kts.")
-              text = text.replace(anchor, anchor + '\n    id("com.google.gms.google-services")', 1)
+          conditional_apply = 'if (file("google-services.json").exists()) {'
+          if conditional_apply not in text:
+              plugins_start = text.find("plugins {")
+              plugins_end = text.find("\n}\n", plugins_start)
+              if plugins_start < 0 or plugins_end < 0:
+                  raise SystemExit("Could not locate plugins block in app/build.gradle.kts.")
+              plugins_end += 3
+              block = '\nif (file("google-services.json").exists()) {\n    apply(plugin = "com.google.gms.google-services")\n}\n'
+              text = text[:plugins_end] + block + text[plugins_end:]
               app.write_text(text)
           PY
 
