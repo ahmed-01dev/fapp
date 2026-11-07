@@ -39,8 +39,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     service = WaselService(Supabase.instance.client);
     pushNotifications = WaselPushNotifications();
     pushNotifications.initialize(service);
-    _pushTapSubscription = FirebaseMessaging.onMessageOpenedApp.listen(_openConversationFromPush);
-    unawaited(_handleInitialPush());
+    if (Firebase.apps.isNotEmpty) {
+      _pushTapSubscription = FirebaseMessaging.onMessageOpenedApp.listen(_openConversationFromPush);
+      unawaited(_handleInitialPush());
+    }
     _setPresence(true);
     presenceTimer = Timer.periodic(const Duration(seconds: 45), (_) => _setPresence(true));
     _load();
