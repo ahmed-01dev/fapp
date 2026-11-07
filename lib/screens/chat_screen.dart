@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/wasel_service.dart';
+import '../services/wasel_permissions.dart';
 import 'call_screen.dart';
 import '../widgets/glass_ui.dart';
 
@@ -112,6 +113,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _startCall(String callType) async {
     if (widget.kind != 'direct') return;
+    final permissionsGranted = await WaselPermissions.requestCallPermissions(video: callType == 'video');
+    if (!permissionsGranted) {
+      if (mounted) _showMessage('اسمح بالميكروفون' + (callType == 'video' ? ' والكاميرا' : '') + ' أولاً من نافذة الأذونات أو إعدادات التطبيق.');
+      return;
+    }
     try {
       final otherId = await otherUserFuture;
       if (otherId == null || !mounted) {
@@ -143,6 +149,11 @@ class _ChatScreenState extends State<ChatScreen> {
     final callId = call['id'] as String;
     final callerId = call['caller_id'] as String;
     final callType = call['call_type']?.toString() ?? 'audio';
+    final permissionsGranted = await WaselPermissions.requestCallPermissions(video: callType == 'video');
+    if (!permissionsGranted) {
+      if (mounted) _showMessage('لازم تسمح بالميكروفون' + (callType == 'video' ? ' والكاميرا' : '') + ' لقبول المكالمة.');
+      return;
+    }
     try {
       await widget.service.updateCallStatus(callId, 'accepted');
       if (!mounted) return;
