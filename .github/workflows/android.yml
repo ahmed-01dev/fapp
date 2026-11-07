@@ -45,7 +45,10 @@ jobs:
             echo "Android sdkmanager was not found at $SDKMANAGER"
             exit 1
           fi
+          # sdkmanager closes stdin after accepting licenses; avoid treating yes SIGPIPE as a failure.
+          set +o pipefail
           yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null
+          set -o pipefail
           for attempt in 1 2 3; do
             echo "Installing Android NDK 28.2.13676358 (attempt $attempt/3)"
             if "$SDKMANAGER" --sdk_root="$SDK_ROOT" "ndk;28.2.13676358" &&
