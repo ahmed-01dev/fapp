@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/wasel_service.dart';
+import 'call_screen.dart';
 import '../widgets/glass_ui.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -107,6 +108,98 @@ class _ChatScreenState extends State<ChatScreen> {
     } finally {
       if (mounted) setState(() => sending = false);
     }
+  }
+
+  Future<void> _startCall(String callType) async {
+    if (widget.kind != 'direct') return;
+    try {
+      final otherId = await otherUserFuture;
+      if (otherId == null || !mounted) {
+        if (mounted) _showMessage('تعذر تحديد الطرف الآخر للمكالمة.');
+        return;
+      }
+      final callId = await widget.service.startCall(
+        conversationId: widget.conversationId,
+        calleeId: otherId,
+        callType: callType,
+      );
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => CallScreen(
+          service: widget.service,
+          callId: callId,
+          conversationId: widget.conversationId,
+          otherUserId: otherId,
+          callType: callType,
+          isCaller: true,
+        ),
+      ));
+    } catch (error) {
+      if (mounted) _showMessage('تعذر بدء المكالمة: $error');
+    }
+  }
+
+  Future<void> _acceptIncomingCall(Map<String, dynamic> call) async {
+    final callId = call['id'] as String;
+    final callerId = call['caller_id'] as String;
+    final callType = call['call_type']?.toString() ?? 'audio';
+    try {
+      await widget.service.updateCallStatus(callId, 'accepted');
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => CallScreen(
+          service: widget.service,
+          callId: callId,
+          conversationId: widget.conversationId,
+          otherUserId: callerId,
+          callType: callType,
+          isCaller: false,
+        ),
+      ));
+    } catch (error) {
+      if (mounted) _showMessage('تعذر قبول المكالمة: $error');
+    }
+  }
+
+  Future<void> _rejectIncomingCall(String callId) async {
+    try {
+      await widget.service.updateCallStatus(callId, 'rejected');
+    } catch (error) {
+      if (mounted) _showMessage('تعذر رفض المكالمة: $error');
+    }
+  }
+
+  Widget _incomingCallBanner() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: Supabase.instance.client
+          .from('call_sessions')
+          .stream(primaryKey: ['id'])
+          .eq('conversation_id', widget.conversationId)
+          .order('created_at', ascending: false),
+      builder: (context, snapshot) {
+        final incoming = snapshot.data?.where((row) =>
+          row['callee_id'] == widget.service.userId &&
+          row['status'] == 'ringing'
+        ).firstOrNull;
+        if (incoming == null) return const SizedBox.shrink();
+        final call = Map<String, dynamic>.from(incoming);
+        final type = call['call_type'] == 'video' ? 'مكالمة فيديو' : 'مكالمة صوتية';
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+          child: GlassPanel(
+            radius: 18,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(children: [
+              const Icon(Icons.call_received_rounded, color: waselCyan),
+              const SizedBox(width: 9),
+              Expanded(child: Text('وارد $type', style: const TextStyle(fontWeight: FontWeight.w700))),
+              TextButton(onPressed: () => _rejectIncomingCall(call['id'] as String), child: const Text('رفض')),
+              FilledButton(onPressed: () => _acceptIncomingCall(call), child: const Text('قبول')),
+            ]),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _pickAndSendMedia() async {
@@ -484,7 +577,18 @@ class _ChatScreenState extends State<ChatScreen> {
             Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             _chatSubtitle(),
           ])),
-          if (widget.kind == 'direct') PopupMenuButton<String>(
+          if (widget.kind == 'direct') ...[
+            IconButton(
+              tooltip: 'مكالمة صوتية',
+              onPressed: () => _startCall('audio'),
+              icon: const Icon(Icons.call_rounded, color: waselCyan),
+            ),
+            IconButton(
+              tooltip: 'مكالمة فيديو',
+              onPressed: () => _startCall('video'),
+              icon: const Icon(Icons.videocam_rounded, color: waselCyan),
+            ),
+            PopupMenuButton<String>(
             icon: const Icon(Icons.more_horiz_rounded, color: Colors.white70),
             color: const Color(0xFF242132),
             onSelected: _safetyAction,
@@ -507,7 +611,9 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ],
           ),
+          ],
         ])),
+        _incomingCallBanner(),
         Expanded(child: StreamBuilder<List<Map<String, dynamic>>>(
           stream: Supabase.instance.client.from('messages').stream(primaryKey: ['id']).eq('conversation_id', widget.conversationId).order('created_at'),
           builder: (context, snapshot) {
