@@ -177,12 +177,12 @@ class _ChatScreenState extends State<ChatScreen> {
           .eq('conversation_id', widget.conversationId)
           .order('created_at', ascending: false),
       builder: (context, snapshot) {
-        final incoming = snapshot.data?.where((row) =>
+        final incomingRows = snapshot.data?.where((row) =>
           row['callee_id'] == widget.service.userId &&
           row['status'] == 'ringing'
-        ).firstOrNull;
-        if (incoming == null) return const SizedBox.shrink();
-        final call = Map<String, dynamic>.from(incoming);
+        ).toList() ?? const <Map<String, dynamic>>[];
+        if (incomingRows.isEmpty) return const SizedBox.shrink();
+        final call = Map<String, dynamic>.from(incomingRows.first);
         final type = call['call_type'] == 'video' ? 'مكالمة فيديو' : 'مكالمة صوتية';
         return Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
