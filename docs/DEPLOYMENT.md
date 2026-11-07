@@ -26,7 +26,8 @@ The following migrations have been applied to the live WASEL project and are rec
 12. `20261107000900_media_mime_allowlist.sql` — common document MIME types.
 13. `20261107001000_group_invite_safety.sql` — accepted-contact invitations and member removal controls.
 14. `20261107001100_ownership_transfer.sql` — group/channel ownership transfer.
-15. `advisor_security_hardening` (live security adjustment)
+15. `20261107001200_reduce_rpc_privileges.sql` — converts exposed creation RPCs to invoker rights.
+16. `advisor_security_hardening` (live security adjustment)
 
 The live database currently reports 18 public tables with RLS enabled, 8 public tables in the Realtime publication, and the private `chat-media` bucket. These are schema checks, not end-to-end user acceptance tests.
 
@@ -56,7 +57,7 @@ Never put the Supabase service-role key, database password, SMS provider credent
 
 - Configure and test real SMS OTP delivery.
 - Complete Firebase client setup, register device tokens, and set `FCM_SERVICE_ACCOUNT_JSON`.
-- Complete media picker/player UI, resumable upload, thumbnails, and quota/abuse controls.
+- Basic file picking, private upload, image preview, and signed file opening are wired; resumable/background uploads, in-app audio/video players, thumbnails, malware scanning, and quota controls remain.
 - Integrate a maintained Signal Protocol client before claiming E2EE.
 - Integrate Flutter WebRTC, TURN credentials, call UI, and background incoming-call handling.
 - Add automated RLS tests using two separate authenticated accounts.
