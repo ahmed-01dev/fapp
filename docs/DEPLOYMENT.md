@@ -28,7 +28,8 @@ The following migrations have been applied to the live WASEL project and are rec
 14. `20261107001100_ownership_transfer.sql` — group/channel ownership transfer.
 15. `20261107001200_reduce_rpc_privileges.sql` — converts exposed creation RPCs to invoker rights.
 16. `20261107001300_user_presence.sql` — contact-scoped online and last-seen presence.
-17. `advisor_security_hardening` (live security adjustment)
+17. `20261107001400_e2ee_prekey_access_control.sql` — restricts public-key bundle fetches to accepted contacts/shared conversations.
+18. `advisor_security_hardening` (live security adjustment)
 
 The live database currently reports 19 public tables with RLS enabled, 9 public tables in the Realtime publication, and the private `chat-media` bucket. These are schema checks, not end-to-end user acceptance tests.
 
