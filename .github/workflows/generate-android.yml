@@ -54,7 +54,6 @@ jobs:
           existing = {node.get(android + "name") for node in root.findall("uses-permission")}
           for permission in permissions:
               if permission not in existing:
-                  ET.Element  # keep the XML writer explicit and deterministic
                   node = ET.Element("uses-permission")
                   node.set(android + "name", permission)
                   root.insert(0, node)
