@@ -21,7 +21,12 @@ The following migrations have been applied to the live WASEL project and are rec
 7. `20261107000400_conversation_lifecycle.sql`
 8. `20261107000500_rich_message_media.sql`
 9. `20261107000600_call_lifecycle_hardening.sql`
-10. `advisor_security_hardening` (live security adjustment)
+10. `20261107000700_security_policy_consolidation.sql` — consolidated RLS policies and device bundle retrieval.
+11. `20261107000800_indexes_and_rate_limits.sql` — FK indexes and group/channel creation limits.
+12. `20261107000900_media_mime_allowlist.sql` — common document MIME types.
+13. `20261107001000_group_invite_safety.sql` — accepted-contact invitations and member removal controls.
+14. `20261107001100_ownership_transfer.sql` — group/channel ownership transfer.
+15. `advisor_security_hardening` (live security adjustment)
 
 The live database currently reports 18 public tables with RLS enabled, 8 public tables in the Realtime publication, and the private `chat-media` bucket. These are schema checks, not end-to-end user acceptance tests.
 
