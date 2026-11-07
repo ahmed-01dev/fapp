@@ -135,7 +135,7 @@ class WaselService {
     final memberships = await client.from('conversation_members').select('conversation_id').eq('user_id', userId);
     final ids = memberships.map((e) => e['conversation_id'] as String).toList();
     if (ids.isEmpty) return [];
-    final rows = await client.from('conversations').select('id,created_at').inFilter('id', ids).order('created_at', ascending: false);
+    final rows = await client.from('conversations').select('id,kind,title,username,created_at').inFilter('id', ids).order('created_at', ascending: false);
     final result = <Map<String, dynamic>>[];
     for (final row in rows) {
       final members = await client.from('conversation_members').select('user_id').eq('conversation_id', row['id'] as String);
