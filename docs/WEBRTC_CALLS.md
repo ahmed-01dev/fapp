@@ -3,7 +3,8 @@
 ## What this client now implements
 - Audio and video call UI using `flutter_webrtc`.
 - Peer-to-peer offer/answer and ICE candidate exchange using the existing private `call_sessions` and `call_signals` tables.
-- Microphone mute, camera toggle, camera switch, accept/reject, and hangup.
+- Microphone mute, speaker/earpiece routing, camera toggle, camera switch, accept/reject, and hangup.
+- Video calls default to speaker output; audio calls default to the earpiece. The in-call speaker button switches routes.
 - Google STUN servers are configured as the initial free connectivity path.
 
 ## Required platform scaffold and permissions
@@ -45,7 +46,7 @@ The client calls the authenticated `call-ice-config` function for each active ca
 WebRTC already uses DTLS-SRTP for transport encryption. This is not the same as WASEL-managed end-to-end media encryption. The current call screen does not yet exchange a per-call media key or enable FrameCryptor, so do not claim media E2EE yet. The flutter_webrtc project documents a FrameCryptor API for a second E2EE layer, but it must receive a strong per-call key through an authenticated end-to-end key agreement, not a hard-coded shared password.
 
 ## Important current limitations
-- Incoming call UI is shown while the relevant conversation screen is open. Background/terminated incoming-call delivery is not implemented yet; it requires push call notifications and Android call-notification/foreground-service integration (plus APNs/CallKit for iOS).
+- The backend sends a high-priority FCM incoming-call notification, but native full-screen incoming-call UI and reliable answer/reject actions while the app is backgrounded or terminated are not implemented yet. This needs Android call-style notification/foreground-service integration and iOS CallKit/PushKit handling. On OPPO/ColorOS, autostart and battery restrictions also need device testing.
 - Public STUN servers do not relay media. Some carrier, office, school, and symmetric-NAT networks require TURN. Until TURN is configured, a call may fail to connect on those networks.
 - WebRTC media is protected in transit by DTLS-SRTP between the two peer endpoints; a TURN relay forwards encrypted packets and does not decrypt media. However, WASEL does not yet provide app-level peer identity verification or a separately negotiated FrameCryptor media key. Do not describe the call stack as having Signal-style identity-bound E2EE until that key agreement and verification are implemented and tested.
 - A successful static build is not proof of real device-to-device operation. Test with two accounts on two separate networks, one audio call and one video call, then test reject, hangup, permission denial, app backgrounding, and reconnect.
