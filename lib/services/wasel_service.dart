@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class WaselService {
@@ -232,5 +234,55 @@ class WaselService {
           .eq('conversation_id', conversationId)
           .eq('user_id', userId);
     }
+  }
+
+  Future<Map<String, dynamic>> uploadAndSendMedia({
+    required String conversationId,
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+    required String messageType,
+    String? caption,
+  }) async {
+    const allowedTypes = {'image', 'video', 'audio', 'file'};
+    if (!allowedTypes.contains(messageType)) {
+      throw const FormatException('نوع الملف غير مدعوم.');
+    }
+    if (bytes.isEmpty || bytes.lengthInBytes > 50 * 1024 * 1024) {
+      throw const FormatException('حجم الملف يجب أن يكون بين 1 بايت و50 ميجابايت.');
+    }
+    final safeName = fileName
+        .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_')
+        .replaceAll(RegExp(r'_+'), '_');
+    final random = Random.secure();
+    final suffix = List.generate(12, (_) => random.nextInt(16).toRadixString(16)).join();
+    final path = '$conversationId/$userId/${DateTime.now().microsecondsSinceEpoch}_$suffix_${safeName.isEmpty ? 'upload' : safeName}';
+    await client.storage.from('chat-media').uploadBinary(
+      path,
+      bytes,
+      fileOptions: FileOptions(contentType: mimeType, upsert: false),
+    );
+    try {
+      final row = await client.from('messages').insert({
+        'conversation_id': conversationId,
+        'sender_id': userId,
+        'body': caption?.trim().isNotEmpty == true ? caption!.trim() : fileName,
+        'message_type': messageType,
+        'media_path': path,
+        'media_mime': mimeType,
+        'media_size': bytes.lengthInBytes,
+      }).select('id,conversation_id,sender_id,body,message_type,media_path,media_mime,media_size,created_at').single();
+      return Map<String, dynamic>.from(row);
+    } catch (_) {
+      await client.storage.from('chat-media').remove([path]);
+      rethrow;
+    }
+  }
+
+  Future<String> mediaSignedUrl(String path, {Duration expiresIn = const Duration(hours: 1)}) async {
+    return client.storage.from('chat-media').createSignedUrl(
+      path,
+      expiresIn.inSeconds,
+    );
   }
 }
