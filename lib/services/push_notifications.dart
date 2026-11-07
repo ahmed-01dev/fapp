@@ -47,6 +47,10 @@ class WaselPushNotifications {
     await _tokenSubscription?.cancel();
     _tokenSubscription = messaging.onTokenRefresh.listen((token) async {
       if (token.isEmpty) return;
+      final previous = _lastToken;
+      if (previous != null && previous != token) {
+        try { await service.disablePushToken(previous); } catch (_) {}
+      }
       _lastToken = token;
       try {
         await service.registerPushToken(token, platform);
