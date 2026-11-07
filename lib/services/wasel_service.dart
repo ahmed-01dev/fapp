@@ -296,6 +296,9 @@ class WaselService {
         'media_mime': mimeType,
         'media_size': bytes.lengthInBytes,
       }).select('id,conversation_id,sender_id,body,message_type,media_path,media_mime,media_size,created_at').single();
+      try {
+        await client.functions.invoke('push-dispatch', body: {'message_id': row['id']});
+      } catch (_) {}
       return Map<String, dynamic>.from(row);
     } catch (_) {
       await client.storage.from('chat-media').remove([path]);
