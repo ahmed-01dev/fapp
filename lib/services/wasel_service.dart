@@ -309,4 +309,24 @@ class WaselService {
       expiresIn.inSeconds,
     );
   }
+
+  Future<void> registerPushToken(String token, String platform) async {
+    if (token.trim().length < 20 || !{'android', 'ios'}.contains(platform)) {
+      throw const FormatException('بيانات جهاز الإشعارات غير صالحة.');
+    }
+    await client.from('device_push_tokens').upsert({
+      'user_id': userId,
+      'token': token.trim(),
+      'platform': platform,
+      'disabled_at': null,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'token');
+  }
+
+  Future<void> disablePushToken(String token) async {
+    await client.from('device_push_tokens').update({
+      'disabled_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('token', token).eq('user_id', userId);
+  }
 }
