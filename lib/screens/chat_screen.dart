@@ -24,6 +24,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool sending = false;
   String? error;
   Map<String, dynamic>? replyTarget;
+  final Set<String> readReceiptSent = {};
   final Map<String, Future<String>> mediaUrlCache = {};
 
   @override
@@ -415,6 +416,23 @@ class _ChatScreenState extends State<ChatScreen> {
         Expanded(child: StreamBuilder<List<Map<String, dynamic>>>(
           stream: Supabase.instance.client.from('messages').stream(primaryKey: ['id']).eq('conversation_id', widget.conversationId).order('created_at'),
           builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              final pendingReads = snapshot.data!
+                  .where((row) => row['sender_id'] != widget.service.userId)
+                  .map((row) => row['id'] as String)
+                  .where((id) => !readReceiptSent.contains(id))
+                  .toList();
+              if (pendingReads.isNotEmpty) {
+                readReceiptSent.addAll(pendingReads);
+                Future.microtask(() async {
+                  try {
+                    await widget.service.markMessagesRead(pendingReads);
+                  } catch (_) {
+                    readReceiptSent.removeAll(pendingReads);
+                  }
+                });
+              }
+            }
             final rows = snapshot.hasData ? snapshot.data! : messages;
             if (loading && !snapshot.hasData) return const Center(child: CircularProgressIndicator(color: waselPurple));
             if (error != null && rows.isEmpty) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(error!, textAlign: TextAlign.center)));
