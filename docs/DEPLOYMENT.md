@@ -1,82 +1,64 @@
-# WASEL backend deployment runbook
+# WASEL deployment runbook
 
-This repository contains backend source and migrations. Nothing in this document means a cloud project has already been created or deployed.
+## Live Supabase project
 
-## 1. Required project boundary
+- Project: `qxtqrdzvwncfvyvbevok`
+- URL: `https://qxtqrdzvwncfvyvbevok.supabase.co`
+- Region: `eu-west-1`
+- Status at last verification: `ACTIVE_HEALTHY`
+- This is the dedicated WASEL project. Never deploy WASEL migrations to NEXORA.
 
-Create a dedicated Supabase project named WASEL in a separate WASEL organization. Do not link this repository to the existing NEXORA project. Keep the project on a $0 plan; stop if the dashboard quotes any non-zero charge and obtain explicit approval before proceeding.
+## Database
 
-Choose a region close to the primary users (Frankfurt / eu-central-1 is the current recommendation for Egypt). Region choice does not guarantee latency or availability.
+The following migrations have been applied to the live WASEL project and are recorded in Supabase migration history:
 
-## 2. Local prerequisites
+1. `20261106000100_wasel_core.sql`
+2. `20261106000200_backend_foundation.sql`
+3. `20261106000300_security_hardening.sql`
+4. `20261107000100_media_and_call_signaling.sql`
+5. `20261107000200_e2ee_key_directory.sql`
+6. `20261107000300_groups_receipts_reactions.sql`
+7. `20261107000400_conversation_lifecycle.sql`
+8. `20261107000500_rich_message_media.sql`
+9. `20261107000600_call_lifecycle_hardening.sql`
+10. `advisor_security_hardening` (live security adjustment)
 
-Install the Supabase CLI and Flutter SDK. From the repository root:
+The live database currently reports 18 public tables with RLS enabled, 8 public tables in the Realtime publication, and the private `chat-media` bucket. These are schema checks, not end-to-end user acceptance tests.
 
-```sh
-supabase --version
-flutter --version
-supabase login
-supabase link --project-ref YOUR_WASEL_PROJECT_REF
-```
+For future changes, add a new timestamped migration under `supabase/migrations/`, review it, apply it to WASEL only, and verify migration history and advisors.
 
-Never commit access tokens, database passwords, service-role keys, SMS credentials, or push-provider private keys.
+## Deployed Edge Functions
 
-## 3. Database deployment
+- `health` — public liveness endpoint; JWT verification disabled intentionally.
+- `account-bootstrap` — requires a valid user JWT.
+- `push-dispatch` — requires a valid user JWT, verifies message ownership and recipient privacy, and dispatches generic FCM notifications.
 
-Review the SQL before applying it. The ordered CLI migrations are already present under `supabase/migrations/`:
+Function status was verified as `ACTIVE`. Push delivery still requires Firebase project configuration, device token registration, and the server-side `FCM_SERVICE_ACCOUNT_JSON` secret. See [PROVIDER_SETUP.md](PROVIDER_SETUP.md).
 
-1. `20261106000100_wasel_core.sql` — baseline schema.
-2. `20261106000200_backend_foundation.sql` — push-token registry and safety tables.
-3. `20261106000300_security_hardening.sql` — immutable message/request identities and block-aware discovery.
+## Flutter client configuration
 
-Apply them to the linked dedicated WASEL project:
-
-```sh
-supabase db push
-```
-
-The human-readable source copies remain under `database/` for review. Keep the migration copies and source copies synchronized when making future schema changes. Do not apply either file to NEXORA. After deployment, verify RLS is enabled on every client-facing table, verify the `messages` table is in `supabase_realtime`, and test access using two normal authenticated accounts.
-
-## 4. Edge Functions
-
-The repository config sets JWT verification off only for the public liveness endpoint. Account bootstrap requires a valid JWT.
-
-```sh
-supabase functions deploy health
-supabase functions deploy account-bootstrap
-```
-
-Smoke test the health endpoint:
-
-```sh
-curl --fail --silent --show-error https://YOUR_WASEL_PROJECT_REF.supabase.co/functions/v1/health
-```
-
-Expected response includes `"status":"ok"`. This checks function liveness only; it does not prove database, authentication, realtime, push, or media are production-ready.
-
-## 5. Flutter client configuration
-
-Use only the project URL and publishable key in the client build:
+Use only the Supabase project URL and publishable key in the app build:
 
 ```sh
 flutter build apk --release \
-  --dart-define=SUPABASE_URL=https://YOUR_WASEL_PROJECT_REF.supabase.co \
+  --dart-define=SUPABASE_URL=https://qxtqrdzvwncfvyvbevok.supabase.co \
   --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 ```
 
-The publishable key is intended for client use and is not a substitute for RLS. Never pass a service-role key to Flutter or GitHub Actions build arguments.
+Never put the Supabase service-role key, database password, SMS provider credentials, FCM service-account JSON, or TURN credentials in Flutter, GitHub source, or a downloadable APK.
 
-## 6. Mandatory verification before inviting users
+## Remaining production gates
 
-- Phone Auth provider and SMS delivery are configured and tested; SMS may incur per-message charges.
-- RLS tests prove one user cannot read another user's private conversations, messages, device tokens, blocks, or reports.
-- Realtime delivers only rows the subscriber is authorized to read.
-- Nearby is opt-in, expires automatically, and never returns raw coordinates.
-- Abuse reporting and blocking are available in the client before public discovery.
-- Storage buckets are private and signed URL access is scoped to the owner / conversation.
-- Push tokens are registered securely; no push delivery is claimed until FCM/APNs are configured.
-- The app clearly states that messages are not end-to-end encrypted until an audited Signal Protocol implementation and key lifecycle exist.
+- Configure and test real SMS OTP delivery.
+- Complete Firebase client setup, register device tokens, and set `FCM_SERVICE_ACCOUNT_JSON`.
+- Complete media picker/player UI, resumable upload, thumbnails, and quota/abuse controls.
+- Integrate a maintained Signal Protocol client before claiming E2EE.
+- Integrate Flutter WebRTC, TURN credentials, call UI, and background incoming-call handling.
+- Add automated RLS tests using two separate authenticated accounts.
+- Test blocking/reporting and all message/group/channel flows end to end.
+- Review advisor warnings and performance indexes against actual query patterns.
+- Add monitoring, backups, retention/deletion policies, rate limiting, and incident procedures.
 
-## 7. Current scope boundary
+## Free-tier boundary
 
-This deployment uses Supabase-managed services; it does not create a separate always-on Node.js/Go server. The current codebase does not yet implement media upload, push delivery, WebRTC calls, group conversations, background workers, or end-to-end encryption. Free-tier quotas, pausing, storage, and egress limits apply.
+This project uses Supabase-managed Postgres, Auth, Realtime, Storage, and Edge Functions. It does not have a separate always-on custom server. Free tiers have quotas, possible pausing, storage/egress limits, and no production SLA. SMS, TURN relay traffic, high media usage, and production-scale traffic may require paid services. Do not upgrade or incur charges without explicit approval.
