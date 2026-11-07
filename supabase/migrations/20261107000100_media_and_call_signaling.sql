@@ -115,14 +115,48 @@ with check (
   and private.is_conversation_member(conversation_id, callee_id)
 );
 
+create or replace function private.guard_call_session_update()
+returns trigger
+language plpgsql
+set search_path = ''
+as $
+begin
+  if new.id <> old.id
+    or new.conversation_id <> old.conversation_id
+    or new.caller_id <> old.caller_id
+    or new.callee_id <> old.callee_id
+    or new.created_at <> old.created_at then
+    raise exception 'call identity fields are immutable';
+  end if;
+  if auth.uid() <> old.callee_id then
+    raise exception 'only the callee may change call state';
+  end if;
+  if not (
+    (old.status = 'ringing' and new.status in ('accepted','rejected','missed'))
+    or (old.status = 'accepted' and new.status = 'ended')
+  ) then
+    raise exception 'invalid call state transition';
+  end if;
+  if new.status = 'accepted' and new.answered_at is null then
+    new.answered_at := now();
+  end if;
+  if new.status in ('rejected','missed','ended') and new.ended_at is null then
+    new.ended_at := now();
+  end if;
+  return new;
+end;
+$;
+revoke all on function private.guard_call_session_update() from public, anon, authenticated;
+drop trigger if exists call_sessions_guard_update on public.call_sessions;
+create trigger call_sessions_guard_update
+before update on public.call_sessions
+for each row execute function private.guard_call_session_update();
+
 drop policy if exists "callee updates call state" on public.call_sessions;
 create policy "callee updates call state"
 on public.call_sessions for update to authenticated
 using (callee_id = (select auth.uid()))
-with check (
-  callee_id = (select auth.uid())
-  and caller_id = (select caller_id from public.call_sessions old_call where old_call.id = id)
-);
+with check (callee_id = (select auth.uid()));
 
 drop policy if exists "call participants read signals" on public.call_signals;
 create policy "call participants read signals"
