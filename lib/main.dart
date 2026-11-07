@@ -30,6 +30,12 @@ Future<void> main() async {
       projectId: firebaseProjectId,
       iosBundleId: firebaseIosBundleId.isEmpty ? null : firebaseIosBundleId,
     ));
+  } else {
+    // Android can use the native Firebase config generated from google-services.json.
+    // Keep the app usable when Firebase has not been configured yet.
+    try {
+      await Firebase.initializeApp();
+    } catch (_) {}
   }
   runApp(WaselApp(configured: configured));
 }
