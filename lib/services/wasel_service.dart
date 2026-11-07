@@ -104,7 +104,31 @@ class WaselService {
   Future<void> sendMessage(String conversationId, String body) async {
     final text = body.trim();
     if (text.isEmpty) return;
-    await client.from('messages').insert({'conversation_id': conversationId, 'sender_id': userId, 'body': text});
+    final row = await client.from('messages').insert({
+      'conversation_id': conversationId,
+      'sender_id': userId,
+      'body': text,
+      'message_type': 'text',
+    }).select('id').single();
+    try {
+      await client.functions.invoke('push-dispatch', body: {'message_id': row['id']});
+    } catch (_) {
+      // Notification delivery is independent of the message transaction.
+    }
+  }
+
+  Future<void> markMessagesRead(List<String> messageIds) async {
+    if (messageIds.isEmpty) return;
+    final now = DateTime.now().toUtc().toIso8601String();
+    await client.from('message_receipts').upsert(
+      messageIds.map((id) => {
+        'message_id': id,
+        'user_id': userId,
+        'delivered_at': now,
+        'read_at': now,
+      }).toList(),
+      onConflict: 'message_id,user_id',
+    );
   }
 
   Future<List<Map<String, dynamic>>> loadConversations() async {
