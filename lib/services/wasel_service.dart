@@ -50,6 +50,55 @@ class WaselService {
         .eq('id', requestId).eq('recipient_id', userId).eq('status', 'pending');
   }
 
+  Future<String?> otherParticipantId(String conversationId) async {
+    final members = await client
+        .from('conversation_members')
+        .select('user_id')
+        .eq('conversation_id', conversationId);
+    for (final member in members) {
+      final id = member['user_id'] as String;
+      if (id != userId) return id;
+    }
+    return null;
+  }
+
+  Future<void> blockUser(String otherUserId) async {
+    if (otherUserId == userId) {
+      throw const FormatException('لا يمكنك حظر حسابك.');
+    }
+    await client.from('user_blocks').upsert({
+      'blocker_id': userId,
+      'blocked_id': otherUserId,
+    }, onConflict: 'blocker_id,blocked_id');
+  }
+
+  Future<void> unblockUser(String otherUserId) async {
+    await client.from('user_blocks')
+        .delete()
+        .eq('blocker_id', userId)
+        .eq('blocked_id', otherUserId);
+  }
+
+  Future<void> reportUser({
+    required String reportedUserId,
+    required String reason,
+    String? details,
+  }) async {
+    const allowed = {
+      'spam', 'harassment', 'impersonation', 'scam', 'unsafe_content', 'other',
+    };
+    if (!allowed.contains(reason)) {
+      throw const FormatException('سبب الإبلاغ غير صالح.');
+    }
+    final note = details?.trim();
+    await client.from('user_reports').insert({
+      'reporter_id': userId,
+      'reported_user_id': reportedUserId,
+      'reason': reason,
+      if (note != null && note.isNotEmpty) 'details': note,
+    });
+  }
+
   Future<void> sendMessage(String conversationId, String body) async {
     final text = body.trim();
     if (text.isEmpty) return;
