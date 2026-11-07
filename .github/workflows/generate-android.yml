@@ -90,7 +90,7 @@ jobs:
               anchor = 'id("org.jetbrains.kotlin.android")'
               if anchor not in text:
                   raise SystemExit("Could not locate Kotlin plugin declaration in settings.gradle.kts.")
-              text = text.replace(anchor, anchor + '\\n    id("com.google.gms.google-services") version "4.4.4" apply false', 1)
+              text = text.replace(anchor, anchor + '\n    id("com.google.gms.google-services") version "4.4.4" apply false', 1)
               settings.write_text(text)
 
           text = app.read_text()
@@ -98,7 +98,7 @@ jobs:
               anchor = 'id("com.android.application")'
               if anchor not in text:
                   raise SystemExit("Could not locate Android application plugin in app/build.gradle.kts.")
-              text = text.replace(anchor, anchor + '\\n    id("com.google.gms.google-services")', 1)
+              text = text.replace(anchor, anchor + '\n    id("com.google.gms.google-services")', 1)
               app.write_text(text)
           PY
 
