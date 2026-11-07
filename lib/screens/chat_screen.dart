@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/wasel_service.dart';
 import '../widgets/glass_ui.dart';
@@ -20,6 +22,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool loading = true;
   bool sending = false;
   String? error;
+  final Map<String, Future<String>> mediaUrlCache = {};
 
   @override
   void initState() { super.initState(); _load(); }
@@ -59,6 +62,137 @@ class _ChatScreenState extends State<ChatScreen> {
     } finally {
       if (mounted) setState(() => sending = false);
     }
+  }
+
+  Future<void> _pickAndSendMedia() async {
+    if (sending) return;
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.single;
+      final bytes = file.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        _showMessage('تعذر قراءة الملف من الهاتف. جرّب ملفاً آخر.');
+        return;
+      }
+      final extension = (file.extension ?? '').toLowerCase();
+      const mimeTypes = <String, String>{
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+        'webp': 'image/webp', 'gif': 'image/gif',
+        'mp4': 'video/mp4', 'webm': 'video/webm',
+        'mp3': 'audio/mpeg', 'aac': 'audio/aac', 'ogg': 'audio/ogg',
+        'm4a': 'audio/mp4', 'wav': 'audio/wav',
+        'pdf': 'application/pdf', 'txt': 'text/plain', 'csv': 'text/csv',
+        'zip': 'application/zip', 'doc': 'application/msword',
+        'xls': 'application/vnd.ms-excel', 'ppt': 'application/vnd.ms-powerpoint',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      };
+      final mime = mimeTypes[extension];
+      if (mime == null) {
+        _showMessage('نوع الملف غير مدعوم حالياً.');
+        return;
+      }
+      final type = mime.startsWith('image/') ? 'image'
+          : mime.startsWith('video/') ? 'video'
+          : mime.startsWith('audio/') ? 'audio' : 'file';
+      setState(() { sending = true; error = null; });
+      await widget.service.uploadAndSendMedia(
+        conversationId: widget.conversationId,
+        bytes: bytes,
+        fileName: file.name,
+        mimeType: mime,
+        messageType: type,
+      );
+      await _load();
+    } catch (e) {
+      if (mounted) _showMessage('تعذر إرسال الملف: $e');
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
+  Future<String> _signedMediaUrl(String path) {
+    return mediaUrlCache.putIfAbsent(path, () => widget.service.mediaSignedUrl(path));
+  }
+
+  Future<void> _openMedia(String path) async {
+    try {
+      final url = await _signedMediaUrl(path);
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) _showMessage('تعذر فتح الملف: $e');
+    }
+  }
+
+  Widget _messageContent(Map<String, dynamic> message) {
+    final type = message['message_type']?.toString() ?? 'text';
+    final path = message['media_path']?.toString();
+    if (type == 'image' && path != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FutureBuilder<String>(
+            future: _signedMediaUrl(path),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const SizedBox(
+                  width: 210, height: 150,
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                );
+              }
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.network(
+                  snapshot.data!,
+                  width: 230,
+                  height: 190,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox(
+                    width: 210, height: 100,
+                    child: Center(child: Icon(Icons.broken_image_outlined)),
+                  ),
+                ),
+              );
+            },
+          ),
+          if ((message['body']?.toString() ?? '').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 7),
+              child: Text(message['body'].toString()),
+            ),
+        ],
+      );
+    }
+    if (type != 'text' && path != null) {
+      final icon = switch (type) {
+        'video' => Icons.play_circle_outline_rounded,
+        'audio' => Icons.audio_file_rounded,
+        _ => Icons.insert_drive_file_outlined,
+      };
+      return InkWell(
+        onTap: () => _openMedia(path),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, color: waselCyan, size: 26),
+          const SizedBox(width: 9),
+          Flexible(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(message['body']?.toString() ?? 'ملف مرفق', maxLines: 2, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 2),
+              const Text('اضغط لفتح الملف', style: TextStyle(color: Colors.white60, fontSize: 10)),
+            ]),
+          ),
+          const SizedBox(width: 6),
+          const Icon(Icons.download_rounded, size: 18, color: Colors.white70),
+        ]),
+      );
+    }
+    return Text(message['body']?.toString() ?? '', style: const TextStyle(color: Colors.white, height: 1.45, fontSize: 14));
   }
 
   Future<void> _safetyAction(String action) async {
@@ -199,7 +333,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       border: Border.all(color: Colors.white.withValues(alpha: mine ? .16 : .10)),
                       boxShadow: mine ? [BoxShadow(color: waselPurple.withValues(alpha: .14), blurRadius: 18, offset: const Offset(0, 5))] : null,
                     ),
-                    child: Text(message['body']?.toString() ?? '', style: const TextStyle(color: Colors.white, height: 1.45, fontSize: 14)),
+                    child: _messageContent(Map<String, dynamic>.from(message)),
                   ),
                 );
               },
@@ -208,7 +342,7 @@ class _ChatScreenState extends State<ChatScreen> {
         )),
         if (error != null && messages.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(error!, style: const TextStyle(color: Color(0xFFFF8794), fontSize: 11))),
         Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 10), child: GlassPanel(radius: 25, padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7), opacity: .95, child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.add_circle_outline_rounded, color: waselCyan)),
+          IconButton(onPressed: sending ? null : _pickAndSendMedia, icon: const Icon(Icons.add_circle_outline_rounded, color: waselCyan)),
           Expanded(child: TextField(
             controller: input, focusNode: focus, minLines: 1, maxLines: 5,
             textInputAction: TextInputAction.newline,
