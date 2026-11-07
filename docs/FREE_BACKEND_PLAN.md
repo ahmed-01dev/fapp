@@ -1,45 +1,52 @@
-# WASEL — Zero-budget backend plan
+# WASEL — zero-budget backend plan and live status
 
-## Goal
-Ship a real, secure MVP without renting a VPS. Use the existing Flutter client with Supabase-managed Postgres, Auth, Realtime, Storage and Edge Functions. GitHub Actions is build automation, not an application server.
+## Live deployment
+The dedicated WASEL Supabase project is deployed:
+- Project ref: `qxtqrdzvwncfvyvbevok`
+- URL: `https://qxtqrdzvwncfvyvbevok.supabase.co`
+- Region: `eu-west-1`
+- State at last check: `ACTIVE_HEALTHY`
 
-## Cost boundary
-- Keep the project on a genuinely $0 plan while prototyping.
-- Never create or upgrade a paid Supabase project without the owner's explicit approval.
-- Free tiers have quotas, inactivity/pausing rules, storage/egress limits and no production SLA. Re-check current plan limits before launch.
-- SMS delivery is not assumed free. Phone OTP requires a supported provider and may incur per-message charges. Until configured, use a safe development-only auth flow; do not promise live SMS OTP.
-- Push delivery requires FCM/APNs project setup. Provider setup may be free, but credentials and platform configuration are still required.
-- TURN relay bandwidth, large media storage, and high-volume calls are not assumed to be free.
+Do not deploy to the NEXORA project.
 
-## Runtime map
-| Concern | MVP implementation | Status |
-|---|---|---|
-| Database | Supabase Postgres + RLS | SQL source exists; not deployed to WASEL project |
-| Identity | Supabase Auth | Client flow exists; SMS provider not configured |
-| Realtime chat | Supabase Realtime + RLS | Client integration exists; publication must be verified after migration |
-| API | Supabase Edge Functions (Deno) | Source added here; deployment requires selected WASEL project |
-| Push | FCM/APNs + device token registry | Registry migration prepared; delivery integration pending credentials |
-| Media | Private Supabase Storage bucket + signed URLs | Not implemented yet |
-| Background jobs | Postgres scheduled jobs / Edge Function invocation | Not deployed; no always-on worker on free plan |
-| Calls | WebRTC + external STUN/TURN | Not implemented; TURN may cost money |
-| E2EE | Audited Signal Protocol implementation | Not implemented; current text messages are not E2EE |
+## What is deployed
+- Postgres schema for profiles, direct conversations, groups/channels, members, messages, receipts, reactions, pins, typing presence, contact requests, blocks, reports, nearby presence, push token registry, call sessions/signaling, and device public-key directory.
+- RLS is enabled on all 18 current public tables.
+- Realtime publication includes 8 public tables.
+- Private `chat-media` Storage bucket with 50 MiB object limit and MIME allowlist.
+- Edge Functions: `health`, `account-bootstrap`, `push-dispatch`.
+- Database RPCs for Nearby, group creation and channel creation.
+- Flutter service methods for text, group/channel lifecycle, media upload/signed URLs, receipts, reactions, pins, typing presence, and device-token registration.
 
-## Deployment gate
-The only Supabase project currently visible in the connected account is named `nexora`. It is not WASEL, so do not apply WASEL migrations or deploy WASEL functions there. Create/select a dedicated WASEL project first, verify its quoted cost is $0, then apply migrations and deploy functions.
+## Not yet production-complete
+| Feature | Live state |
+|---|---|
+| Basic text send/read | Flutter and Supabase integration exists; two-device acceptance test still required |
+| Realtime messages | Schema publication and stream client exist; two-account RLS/realtime tests required |
+| Groups/channels | Database lifecycle/RPCs exist; complete UI, discovery, moderation and tests remain |
+| Read receipts | Tables and basic client write path exist; delivered/read UI and robust realtime updates remain |
+| Media | Private bucket and upload/signed URL service methods exist; picker/player/resumable UI and malware controls remain |
+| Push | Dispatch function deployed; Firebase client, device token acquisition and service-account secret still required |
+| OTP | UI flow exists; SMS provider and real Egyptian number test still required |
+| Calls | Signaling schema exists; WebRTC client, TURN, background call UX and tests not implemented |
+| E2EE | Public-key directory exists only; Signal Protocol, client crypto and secure key lifecycle not implemented |
+| Operations | Monitoring, scheduled cleanup, backups, abuse response and production runbooks remain |
 
-## Release sequence
-1. Select a dedicated free WASEL Supabase project.
-2. Apply and verify database migrations; run security and performance advisors.
-3. Deploy `health` and `account-bootstrap` Edge Functions.
-4. Configure Auth providers and test sign-up/sign-in with real devices.
-5. Configure private media storage and signed upload/download flows.
-6. Add push delivery after FCM/APNs credentials are configured.
-7. Add background cleanup/scheduled work with explicit quotas and monitoring.
-8. Implement group messaging, receipts, calls and audited E2EE as separate milestones.
+## Cost and safety boundaries
+- Keep the prototype on a genuinely $0 plan; do not upgrade or incur charges without explicit approval.
+- Supabase free tiers have quotas, pausing/inactivity rules, storage/egress limits, and no production SLA.
+- SMS delivery is not assumed free.
+- TURN relay bandwidth and high media storage/egress are not assumed free.
+- Never ship service-role keys, database passwords, Firebase service-account JSON, SMS credentials, or TURN secrets in Flutter.
+- Do not describe messages as end-to-end encrypted until audited client-side cryptography is deployed and verified.
 
-## Security rules
-- Never ship service-role keys, database passwords, FCM private keys or SMS provider secrets in Flutter.
-- All client-accessible tables must have RLS enabled and narrowly scoped policies.
-- Edge Functions must validate the caller's access token and preserve the caller's RLS context unless a narrowly reviewed privileged operation is required.
-- Do not describe the product as end-to-end encrypted until audited client-side encryption and key lifecycle are implemented.
-- Nearby is opt-in, approximate-only, short-lived and must never expose raw coordinates to other users.
+## Immediate remaining work
+1. Configure Firebase/FCM and APNs; set `FCM_SERVICE_ACCOUNT_JSON` as a Supabase Edge Function secret.
+2. Add Firebase client SDK initialization and automatic device token registration/refresh.
+3. Finish the media attachment picker/player and background upload.
+4. Implement and test Signal Protocol encryption.
+5. Implement WebRTC voice/video calls and TURN.
+6. Add integration tests for two authenticated users, blocking, reports, groups, channels, receipts, storage access and call state transitions.
+7. Add moderation workflows, rate limits, monitoring, cleanup jobs and backups.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) and [PROVIDER_SETUP.md](PROVIDER_SETUP.md).
