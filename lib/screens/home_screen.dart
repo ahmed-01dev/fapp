@@ -168,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _load();
       if (mounted) _message('تم إنشاء المجموعة. تقدر تضيف أعضاء من جهات اتصالك.');
       await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(
-        service: service, conversationId: id, title: values.first.trim(),
+        service: service, conversationId: id, title: values.first.trim(), kind: 'group',
       )));
       await _load();
     } catch (e) { if (mounted) _message('تعذر إنشاء المجموعة: $e'); }
@@ -198,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _load();
       if (mounted) _message('تم إنشاء القناة العامة.');
       await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(
-        service: service, conversationId: id, title: values.first.trim(),
+        service: service, conversationId: id, title: values.first.trim(), kind: 'channel',
       )));
       await _load();
     } catch (e) { if (mounted) _message('تعذر إنشاء القناة: $e'); }
@@ -310,7 +310,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final kind = item['kind']?.toString() ?? 'direct';
     final title = kind == 'direct' ? (person?['display_name']?.toString() ?? 'محادثة') : (item['title']?.toString() ?? 'محادثة');
     await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(
-      service: service, conversationId: item['id'] as String, title: title,
+      service: service, conversationId: item['id'] as String, title: title, kind: kind,
     )));
     _load();
   }
