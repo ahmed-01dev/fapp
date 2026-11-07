@@ -30,9 +30,14 @@ class _ChatScreenState extends State<ChatScreen> {
   bool typingSent = false;
   DateTime? lastTypingRefresh;
   final Map<String, Future<String>> mediaUrlCache = {};
+  late final Future<String?> otherUserFuture;
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    otherUserFuture = widget.service.otherParticipantId(widget.conversationId);
+    _load();
+  }
   @override
   void dispose() {
     typingTimer?.cancel();
@@ -342,6 +347,65 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  String _presenceLabel(Map<String, dynamic>? row) {
+    if (row == null) return 'محادثة خاصة';
+    final now = DateTime.now().toUtc();
+    final onlineUntil = DateTime.tryParse(row['online_until']?.toString() ?? '');
+    if (onlineUntil != null && onlineUntil.isAfter(now)) return 'متصل الآن';
+    final lastSeen = DateTime.tryParse(row['last_seen_at']?.toString() ?? '')?.toLocal();
+    if (lastSeen == null) return 'محادثة خاصة';
+    final elapsed = DateTime.now().difference(lastSeen);
+    if (elapsed.inMinutes < 1) return 'آخر ظهور منذ لحظات';
+    if (elapsed.inHours < 1) return 'آخر ظهور منذ ${elapsed.inMinutes} د';
+    if (elapsed.inDays < 1) return 'آخر ظهور منذ ${elapsed.inHours} س';
+    return 'آخر ظهور منذ ${elapsed.inDays} يوم';
+  }
+
+  Widget _chatSubtitle() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: Supabase.instance.client.from('typing_presence')
+          .stream(primaryKey: ['conversation_id', 'user_id'])
+          .eq('conversation_id', widget.conversationId),
+      builder: (context, typingSnapshot) {
+        final now = DateTime.now().toUtc();
+        final someoneTyping = typingSnapshot.data?.any((row) =>
+          row['user_id'] != widget.service.userId &&
+          DateTime.tryParse(row['expires_at']?.toString() ?? '')?.isAfter(now) == true
+        ) ?? false;
+        if (someoneTyping) {
+          return const Text('يكتب الآن...', style: TextStyle(color: waselCyan, fontSize: 11));
+        }
+        if (widget.kind != 'direct') {
+          return Text(widget.kind == 'group' ? 'مجموعة' : 'قناة عامة',
+              style: const TextStyle(color: Color(0xFF9996AA), fontSize: 11));
+        }
+        return FutureBuilder<String?>(
+          future: otherUserFuture,
+          builder: (context, userSnapshot) {
+            final otherId = userSnapshot.data;
+            if (otherId == null) {
+              return const Text('محادثة خاصة', style: TextStyle(color: Color(0xFF9996AA), fontSize: 11));
+            }
+            return StreamBuilder<List<Map<String, dynamic>>>(
+              stream: Supabase.instance.client.from('user_presence')
+                  .stream(primaryKey: ['user_id'])
+                  .eq('user_id', otherId),
+              builder: (context, presenceSnapshot) {
+                final row = presenceSnapshot.data?.isNotEmpty == true
+                    ? presenceSnapshot.data!.first : null;
+                final label = _presenceLabel(row);
+                return Text(label, style: TextStyle(
+                  color: label == 'متصل الآن' ? waselCyan : const Color(0xFF9996AA),
+                  fontSize: 11,
+                ));
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _safetyAction(String action) async {
     try {
       final otherId = await widget.service.otherParticipantId(widget.conversationId);
@@ -418,22 +482,7 @@ class _ChatScreenState extends State<ChatScreen> {
           const SizedBox(width: 11),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-            StreamBuilder<List<Map<String, dynamic>>>(
-              stream: Supabase.instance.client.from('typing_presence')
-                  .stream(primaryKey: ['conversation_id', 'user_id'])
-                  .eq('conversation_id', widget.conversationId),
-              builder: (context, snapshot) {
-                final now = DateTime.now().toUtc();
-                final someoneTyping = snapshot.data?.any((row) =>
-                  row['user_id'] != widget.service.userId &&
-                  DateTime.tryParse(row['expires_at']?.toString() ?? '')?.isAfter(now) == true
-                ) ?? false;
-                return Text(
-                  someoneTyping ? 'يكتب الآن...' : (widget.kind == 'group' ? 'مجموعة' : widget.kind == 'channel' ? 'قناة عامة' : 'محادثة خاصة'),
-                  style: TextStyle(color: someoneTyping ? waselCyan : const Color(0xFF9996AA), fontSize: 11),
-                );
-              },
-            ),
+            _chatSubtitle(),
           ])),
           if (widget.kind == 'direct') PopupMenuButton<String>(
             icon: const Icon(Icons.more_horiz_rounded, color: Colors.white70),
