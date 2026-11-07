@@ -355,6 +355,35 @@ class WaselService {
     return callId;
   }
 
+  Future<List<Map<String, dynamic>>> getCallIceServers(String callId) async {
+    const fallback = <Map<String, dynamic>>[
+      {
+        'urls': [
+          'stun:stun.l.google.com:19302',
+          'stun:stun1.l.google.com:19302',
+        ],
+      },
+    ];
+    try {
+      final response = await client.functions.invoke(
+        'call-ice-config',
+        body: {'call_id': callId},
+      );
+      final data = response.data;
+      if (data is Map && data['iceServers'] is List) {
+        final servers = (data['iceServers'] as List)
+            .whereType<Map>()
+            .map((server) => Map<String, dynamic>.from(server))
+            .where((server) => server['urls'] != null)
+            .toList();
+        if (servers.isNotEmpty) return servers;
+      }
+    } catch (_) {
+      // Keep the call path available with public STUN if TURN credentials are not configured.
+    }
+    return fallback;
+  }
+
   Future<void> sendCallSignal({
     required String callId,
     required String signalType,
