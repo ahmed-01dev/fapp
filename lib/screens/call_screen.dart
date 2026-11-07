@@ -42,6 +42,7 @@ class _CallScreenState extends State<CallScreen> {
   bool _muted = false;
   bool _cameraOff = false;
   bool _ending = false;
+  bool _allowPop = false;
   bool _remoteDescriptionSet = false;
   String _status = 'جارٍ تجهيز الاتصال...';
   String? _error;
@@ -261,7 +262,11 @@ class _CallScreenState extends State<CallScreen> {
       await widget.service.updateCallStatus(widget.callId, 'ended');
     } catch (_) {}
     await _disposeMedia();
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) {
+      setState(() => _allowPop = true);
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) Navigator.of(context).pop();
+    }
   }
 
   Future<void> _disposeMedia() async {
@@ -290,7 +295,7 @@ class _CallScreenState extends State<CallScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: _allowPop,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) unawaited(_endCall());
       },
