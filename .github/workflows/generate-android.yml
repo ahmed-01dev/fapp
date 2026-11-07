@@ -1,0 +1,116 @@
+name: Generate Android platform files
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: generate-android-platform
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Android project
+        run: flutter create --platforms=android --org com.wasel.app .
+
+      - name: Add call and notification permissions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          path = Path("android/app/src/main/AndroidManifest.xml")
+          ET.register_namespace("android", "http://schemas.android.com/apk/res/android")
+          tree = ET.parse(path)
+          root = tree.getroot()
+          android = "{http://schemas.android.com/apk/res/android}"
+
+          permissions = [
+              "android.permission.INTERNET",
+              "android.permission.CAMERA",
+              "android.permission.RECORD_AUDIO",
+              "android.permission.ACCESS_NETWORK_STATE",
+              "android.permission.CHANGE_NETWORK_STATE",
+              "android.permission.MODIFY_AUDIO_SETTINGS",
+              "android.permission.POST_NOTIFICATIONS",
+          ]
+          existing = {node.get(android + "name") for node in root.findall("uses-permission")}
+          for permission in permissions:
+              if permission not in existing:
+                  ET.Element  # keep the XML writer explicit and deterministic
+                  node = ET.Element("uses-permission")
+                  node.set(android + "name", permission)
+                  root.insert(0, node)
+
+          features = [
+              "android.hardware.camera",
+              "android.hardware.camera.autofocus",
+          ]
+          existing_features = {node.get(android + "name") for node in root.findall("uses-feature")}
+          for feature in features:
+              if feature not in existing_features:
+                  node = ET.Element("uses-feature")
+                  node.set(android + "name", feature)
+                  node.set(android + "required", "false")
+                  root.insert(0, node)
+
+          tree.write(path, encoding="utf-8", xml_declaration=True)
+          PY
+
+      - name: Configure Google Services Gradle plugin
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          settings = Path("android/settings.gradle.kts")
+          app = Path("android/app/build.gradle.kts")
+          if not settings.exists() or not app.exists():
+              raise SystemExit("Expected Kotlin Gradle files were not generated; inspect Flutter template.")
+
+          text = settings.read_text()
+          marker = 'id("com.google.gms.google-services")'
+          if marker not in text:
+              anchor = 'id("org.jetbrains.kotlin.android")'
+              if anchor not in text:
+                  raise SystemExit("Could not locate Kotlin plugin declaration in settings.gradle.kts.")
+              text = text.replace(anchor, anchor + '\\n    id("com.google.gms.google-services") version "4.4.4" apply false', 1)
+              settings.write_text(text)
+
+          text = app.read_text()
+          if marker not in text:
+              anchor = 'id("com.android.application")'
+              if anchor not in text:
+                  raise SystemExit("Could not locate Android application plugin in app/build.gradle.kts.")
+              text = text.replace(anchor, anchor + '\\n    id("com.google.gms.google-services")', 1)
+              app.write_text(text)
+          PY
+
+      - name: Commit generated Android platform
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android
+          if git diff --cached --quiet; then
+            echo "Android platform is already up to date."
+            exit 0
+          fi
+          git commit -m "Generate Android platform and configure Firebase services"
+          git push origin main
